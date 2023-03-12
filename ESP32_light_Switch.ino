@@ -10,9 +10,53 @@
 #define ssid "gallifrey"
 #define password "rockstar"
 
-WiFiClient wifiClient;
+// variables
 IPAddress server(172, 17, 17, 10); // address of the MQTT server
-MQTTClient client;                 //(server, 1883, MQTTcallBack); // create the MQTT client object
+int LightButton = 15;              // The input pin of the button that triggers the relay
+int FactoryReset = 16;             // The input pin of the button that will trigger a factory reset
+int RelayPin = 20;                 // The output pin that will trigger the realy
+
+WiFiClient wifiClient; // create the wifi object
+MQTTClient client;     // create the MQTT client object
+
+// setup function
+void setup()
+{
+
+    pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
+    pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
+    PinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
+    pinMode(WIFILEDPin, OUTPUT);         // Setup the output pin for the WIFI LED
+
+    analogWrite(WIFILEDPin, 0); // Set the WIFI Led to off at startup
+
+    WiFi.setHostname(HOSTNAME); // Set the WIFI hostname of the device
+    WiFi.begin(ssid, password); // connect to the WIFI
+
+    // connect to the MQTT server
+    client.begin(server, 1883, wifiClient);
+    // connect(const char clientID[], const char username[], const char password[], bool skip = false);
+    client.connect(HOSTNAME, USERNAME, PASSWORD, false);
+
+    // publish/subscribe
+    if (client.connected())
+    {
+        client.publish("hello/message", "hello world");
+        // client.subscribe("door/control");
+        client.subscribe("Lights/Kitchen");
+        client.onMessage(MQTTcallBack);
+    }
+
+    client.subscribe("Lights/Kitchen");
+} // end of setup function
+
+// main loook function
+void loop()
+{
+
+} // End od main loop function
+
+// ****** Functions begin here
 
 void MQTTcallBack(String topic, String payload)
 {
@@ -33,33 +77,4 @@ void MQTTcallBack(String topic, String payload)
         digitalWrite(WIFILEDPin, temp);
         client.publish("Light/Status", String(temp));
     }
-}
-
-void setup()
-{
-
-    pinMode(WIFILEDPin, OUTPUT);
-
-    WiFi.setHostname(HOSTNAME);
-    WiFi.begin(ssid, password);
-
-    // connect to the MQTT server
-    client.begin(server, 1883, wifiClient);
-    // connect(const char clientID[], const char username[], const char password[], bool skip = false);
-    client.connect(HOSTNAME, USERNAME, PASSWORD, false);
-
-    // publish/subscribe
-    if (client.connected())
-    {
-        client.publish("hello/message", "hello world");
-        // client.subscribe("door/control");
-        client.subscribe("Lights/Kitchen");
-        client.onMessage(MQTTcallBack);
-    }
-
-    client.subscribe("Lights/Kitchen");
-}
-
-void loop()
-{
 }
