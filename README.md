@@ -17,5 +17,5 @@ Right now this is the beginning. There is much more work to be done.
 4. MQTT tiggering via Nodered
 5. Of course fits into a standard wall box in North America
 6. Standard Normmaly open switching and three way switching
-7. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the sawitch is on. This will require a means to measure the current on the switched side.
+7. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side.
 8. More to come.
