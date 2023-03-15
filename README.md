@@ -12,7 +12,7 @@ Right now this is the beginning. There is much more work to be done.
 
 ## Features to add
 1. Over the Air updates
-2. Web server avilable at all time to look at status, veriables and configuration
+2. Web server avilable at all time to look at status, variables and configuration
 3. Light switch works no matter what even before being configured
 4. MQTT tiggering via Nodered
 5. Of course fits into a standard wall box in North America
