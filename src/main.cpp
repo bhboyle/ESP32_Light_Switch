@@ -31,6 +31,7 @@ const char *passwordAP = "12345678";
 IPAddress local_ipAP(192, 168, 1, 1);
 IPAddress gatewayAP(192, 168, 1, 1);
 IPAddress subnetAP(255, 255, 255, 0);
+bool relayStatus = 0;
 
 // create objects
 WiFiClient wifiClient; // create the wifi object
@@ -38,13 +39,14 @@ MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
 Preferences preferences;
 
-// contructors
+// function declorations
 void checkWIFI();
 void maintainMQTT();
 void setColor(int r, int g, int b);
 void getPrefs();
 bool ValidateIP(String IP);
 void createIndexHtml();
+void handleSwitch();
 
 // Start of setup function
 void setup()
@@ -61,11 +63,11 @@ void setup()
   pixels.begin();            // INITIALIZE NeoPixel strip object (REQUIRED)
   pixels.clear();            // Set all pixel colors to 'off'
 
-    setColor(255, 0, 0);
+  setColor(255, 0, 0); // Set LED to red
 
-  checkWIFI();
+  // checkWIFI();
 
-  maintainMQTT();
+  // maintainMQTT();
 
   } // end of setup function
 
@@ -73,72 +75,86 @@ void setup()
   void loop()
   {
 
-    checkWIFI();
+  checkWIFI();
 
-    maintainMQTT();
+  maintainMQTT();
+
+  handleSwitch();
 
   } // End of main loop function
 
   // ****** Functions begin here
 
+  void handleSwitch()
+  {
+  int temp = digitalRead(LightButton);
+  if (temp == 0)
+  {
+    relayStatus = !relayStatus;
+    digitalWrite(RelayPin, relayStatus);
+  }
+  }
+
   // MQTT callback function to handle any trigger events from the MQTT server
   void MQTTcallBack(String topic, String payload)
   {
-    String tempChar = payload; // grab the payload
-    if (tempChar == "0")       // check if the payload is a zero
-    {
-      digitalWrite(RelayPin, LOW); // if it is a zero then turn off the light
-      client.publish("Light/Status", "0");
-    }
-    else if (tempChar == "1") // if it is a one then turn on the light
-    {
-      digitalWrite(RelayPin, HIGH);
-      client.publish("Light/Status", "1");
-    }
-    else if (tempChar == "2") // if it is a 2 then toggle the light
-    {
-      int temp = !digitalRead(RelayPin);
-      digitalWrite(RelayPin, temp);
-      client.publish("Light/Status", String(temp));
-    }
+  String tempChar = payload; // grab the payload
+  if (tempChar == "0")       // check if the payload is a zero
+  {
+    relayStatus = 0;
+    digitalWrite(RelayPin, relayStatus); // if it is a zero then turn off the light
+    client.publish("Light/Status", "0");
+  }
+  else if (tempChar == "1") // if it is a one then turn on the light
+  {
+    relayStatus = 1;
+    digitalWrite(RelayPin, relayStatus);
+    client.publish("Light/Status", "1");
+  }
+  else if (tempChar == "2") // if it is a 2 then toggle the light
+  {
+    relayStatus = !relayStatus;
+    digitalWrite(RelayPin, relayStatus);
+    client.publish("Light/Status", String(relayStatus));
+  }
   } // end of MQTTcallback function
 
   // This function will start the WIFI connection or maintain it if it is already connected
   void checkWIFI()
   {
 
-    if (WiFi.status() != WL_CONNECTED)
-    {
+  if (WiFi.status() != WL_CONNECTED)
+  {
 
-      // Configures static IP address. We use a static IP because it connects to the network faster
+    // Configures static IP address. We use a static IP because it connects to the network faster
 
-      // WiFi.reconnect();
-      WiFi.mode(WIFI_STA);        // set the WIFI mode to Station
-      WiFi.setHostname(HOSTNAME); // Set the WIFI hostname of the device
-      WiFi.begin(ssid, password); // connect to the WIFI
+    // WiFi.reconnect();
+    WiFi.mode(WIFI_STA);        // set the WIFI mode to Station
+    WiFi.setHostname(HOSTNAME); // Set the WIFI hostname of the device
+    WiFi.begin(ssid, password); // connect to the WIFI
 
-      delay(100);
+    delay(100);
 
-      int count = 0; // create a variable that is used to set a timer for connecting to the WIFI
-      while (WiFi.status() != WL_CONNECTED)
-      {             // check if it is connected to the AP
-        delay(100); // wait 100 miliseconds
-        count++;    // Increment the counter variable
-        if (count > 30)
-        {
-          break;
-        } // it is had been trying to connect to the WIFI for 30 * 100 milliseconds then stop trying
-      }
-
-      // This second WIFI status is used to do indicate a failed connection and then put the ESP32 in deep sleep
-      if (WiFi.status() != WL_CONNECTED)
-      { // if it can not connect to the wifi
-        // write the boot verion and count into eeprom and reboot
-
-        ESP.restart();
-      }
-      setColor(255, 255, 0);
+    int count = 0; // create a variable that is used to set a timer for connecting to the WIFI
+    while (WiFi.status() != WL_CONNECTED)
+    {             // check if it is connected to the AP
+      delay(100); // wait 100 miliseconds
+      count++;    // Increment the counter variable
+      if (count > 30)
+      {
+        break;
+      } // it is had been trying to connect to the WIFI for 30 * 100 milliseconds then stop trying
     }
+
+    // This second WIFI status is used to do indicate a failed connection and then put the ESP32 in deep sleep
+    if (WiFi.status() != WL_CONNECTED)
+    { // if it can not connect to the wifi
+      // write the boot verion and count into eeprom and reboot
+
+      ESP.restart();
+    }
+    setColor(255, 255, 0); // Set LED to Yellow
+  }
   } // end of checkwifi function
 
   // This function starts the MQTT connection and if it is already connected it will maintain the connection
@@ -147,7 +163,7 @@ void setup()
     if (client.connected()) // used to maintain the MQTT connection
     {
       client.loop();
-      setColor(0, 255, 0);
+      setColor(0, 255, 0); // Set LED to Green
     }
     else // if the connection has failed then reconnect to the MQTT server
     {
@@ -162,7 +178,7 @@ void setup()
         client.publish("hello/message", "hello world");
         client.subscribe("Lights/Kitchen");
         client.onMessage(MQTTcallBack);
-        setColor(0, 255, 0);
+        setColor(0, 255, 0); // Set LED to Green
       }
     }
   } // end of maintainMQTT function
