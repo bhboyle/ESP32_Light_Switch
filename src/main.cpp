@@ -9,15 +9,8 @@
 #define NeoPixelPin 18
 #define NUMPIXELS 1
 
-// ***** Change the following section for each device.
-#define HOSTNAME "KitchenLight" // The wifi and MQTT host name. this should be changed for each device
-#define USERNAME "bboyle"
-#define PASSWORD "Hanafranastan1!"
-#define ssid "gallifrey"
-#define password "rockstar"
-
 // variables
-// IPAddress server(172, 17, 17, 10); // address of the MQTT server
+
 int LightButton = 15;              // The input pin of the button that triggers the relay
 int FactoryReset = 16;             // The input pin of the button that will trigger a factory reset
 int RelayPin = 20;                 // The output pin that will trigger the relay
@@ -32,12 +25,23 @@ IPAddress local_ipAP(192, 168, 1, 1);
 IPAddress gatewayAP(192, 168, 1, 1);
 IPAddress subnetAP(255, 255, 255, 0);
 bool relayStatus = 0;
+char ssid[32];
+char ssidPassword[32];
+char Hostname[32];
+IPAddress MQTTserver; // address of the MQTT server
+char MQTTuser[32];
+char MQTTpass[32];
+char PublishTopic[32];
+char SubTopic[32];
+bool allSet = false; // used for checking the web page
+int inputError = -1;
 
 // create objects
 WiFiClient wifiClient; // create the wifi object
 MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
 Preferences preferences;
+AsyncWebServer server_AP(80);
 
 // function declorations
 void checkWIFI();
@@ -47,6 +51,7 @@ void getPrefs();
 bool ValidateIP(String IP);
 void createIndexHtml();
 void handleSwitch();
+void handle_NotFound(AsyncWebServerRequest *request);
 
 // Start of setup function
 void setup()
@@ -130,8 +135,8 @@ void setup()
 
     // WiFi.reconnect();
     WiFi.mode(WIFI_STA);        // set the WIFI mode to Station
-    WiFi.setHostname(HOSTNAME); // Set the WIFI hostname of the device
-    WiFi.begin(ssid, password); // connect to the WIFI
+    WiFi.setHostname(Hostname); // Set the WIFI hostname of the device
+    WiFi.begin(ssid, ssidPassword); // connect to the WIFI
 
     delay(100);
 
@@ -168,15 +173,15 @@ void setup()
     else // if the connection has failed then reconnect to the MQTT server
     {
       // connect to the MQTT server
-      client.begin(server, 1883, wifiClient);
+      client.begin(MQTTserver, 1883, wifiClient);
       // connect(const char clientID[], const char username[], const char password[], bool skip = false);
-      client.connect(HOSTNAME, USERNAME, PASSWORD, false);
+      client.connect(Hostname, MQTTuser, MQTTpass, false);
 
       // publish/subscribe
       if (client.connected())
       {
         client.publish("hello/message", "hello world");
-        client.subscribe("Lights/Kitchen");
+        client.subscribe(SubTopic);
         client.onMessage(MQTTcallBack);
         setColor(0, 255, 0); // Set LED to Green
       }
@@ -201,19 +206,29 @@ void setup()
     {
       for (int i = 0; i < totalVariables; i++)
       {
-        Serial.print(variablesArray[i]);
-        Serial.print(": ");
         valuesArray[i] = preferences.getString((variablesArray[i]).c_str(), "");
-        Serial.println(valuesArray[i]);
       }
 
-      // wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdTRUE, (void *)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
-      // WiFi.onEvent(WiFiEvent);
+      // put variable into usable variable in the right format
+      int temp = valuesArray[0].length() + 1;
+      valuesArray[0].toCharArray(ssid, temp);
+      temp = valuesArray[1].length() + 1;
+      valuesArray[1].toCharArray(ssidPassword, temp);
+      temp = valuesArray[2].length() + 1;
+      valuesArray[2].toCharArray(Hostname, temp);
+      MQTTserver.fromString(valuesArray[3]);
+      temp = valuesArray[4].length() + 1;
+      valuesArray[4].toCharArray(MQTTuser, temp);
+      temp = valuesArray[5].length() + 1;
+      valuesArray[5].toCharArray(MQTTpass, temp);
+      temp = valuesArray[6].length() + 1;
+      valuesArray[6].toCharArray(PublishTopic, temp);
+      temp = valuesArray[7].length() + 1;
+      valuesArray[7].toCharArray(SubTopic, temp);
+
       checkWIFI();
 
-      attachFunctions();
-
-      freshStart = true;
+      maintainMQTT();
     }
     else
     {
@@ -231,7 +246,8 @@ void setup()
       bool processedInput = false;
       for (int i = 0; i < totalVariables; i++) {
         if (request->hasParam(variablesArray[i])) {
-          if (i == 2 || i == 3 || i == 4 || i == 5 || i == 6) {
+          if (i == 3)
+          {
             if (ValidateIP(request->getParam(variablesArray[i])->value())) {
               valuesArray[i] = request->getParam(variablesArray[i])->value();
               preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
@@ -254,7 +270,7 @@ void setup()
         request->send(200, "text/html", index_html.c_str());
       }
       if (allSet) {
-        delay(10000);
+        delay(1000);
         preferences.end();
         ESP.restart();
       } });
@@ -271,11 +287,11 @@ void setup()
     index_html.concat("<!DOCTYPE HTML>");
     index_html.concat("<html>");
     index_html.concat("<head>");
-    index_html.concat("<title>ESP Input Form</title>");
+    index_html.concat("<title>Smart Switch Configuration</title>");
     index_html.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
     index_html.concat("</head>");
     index_html.concat("<body>");
-    index_html.concat("<h1> Welcome to the room booking setup page. Please fill all fields below.</h1>");
+    index_html.concat("<h1> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h1>");
 
     index_html.concat("<form action=\"/get\">");
     for (int i = 0; i < totalVariables; i++)
@@ -283,7 +299,7 @@ void setup()
       index_html.concat("<table>");
       index_html.concat("<tr height='15px'>");
       index_html.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
-      if (i == 1)
+      if (i == 1 || i == 5)
       {
         _type = "password";
       }
@@ -324,7 +340,7 @@ void setup()
     index_html.concat("</form>");
     index_html.concat("</body>");
     index_html.concat("</html>");
-  }
+  } // end of createIndexHtml function
 
   bool ValidateIP(String IP)
   {
@@ -337,4 +353,9 @@ void setup()
     {
       return false;
     }
+  }
+
+  void handle_NotFound(AsyncWebServerRequest *request)
+  {
+    request->send(404, "text/plain", "Not found");
   }
