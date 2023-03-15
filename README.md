@@ -5,7 +5,7 @@ Right now this is the beginning. There is much more work to be done.
 
 ## Todo
 1. Finalize the hardware design and order boards and parts for testing
-2. Define the software requirements
+~~ 2. Define the software requirements
 3. Complete the software for the ESP32-S3
 4. Design the enclosure in Fusion 360
 5. Print and test enclosure
@@ -18,4 +18,4 @@ Right now this is the beginning. There is much more work to be done.
 5. Of course fits into a standard wall box in North America
 6. Standard Normmaly open switching and three way switching
 7. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side.
-8. More to come.
+8. LED colors. Green - WIFI and MQTT connected, Red - Boot up, Yellow - WIFI connected
