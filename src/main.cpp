@@ -41,9 +41,9 @@ WiFiClient wifiClient; // create the wifi object
 MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
 Preferences preferences;
-AsyncWebServer server_AP(80);
+AsyncWebServer server(80);
 
-// function declorations
+// function declarations
 void checkWIFI();
 void maintainMQTT();
 void setColor(int r, int g, int b);
@@ -70,10 +70,6 @@ void setup()
 
   setColor(255, 0, 0); // Set LED to red
 
-  // checkWIFI();
-
-  // maintainMQTT();
-
   } // end of setup function
 
   // main loop function
@@ -90,6 +86,7 @@ void setup()
 
   // ****** Functions begin here
 
+  // this function check is the switch button is pressed and toggles the light is it has
   void handleSwitch()
   {
   int temp = digitalRead(LightButton);
@@ -238,11 +235,11 @@ void setup()
 
       createIndexHtml();
 
-      server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-                   { request->send_P(200, "text/html", index_html.c_str()); });
+      server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+                { request->send_P(200, "text/html", index_html.c_str()); });
 
-      server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
-                   {
+      server.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
+                {
       bool processedInput = false;
       for (int i = 0; i < totalVariables; i++) {
         if (request->hasParam(variablesArray[i])) {
@@ -266,7 +263,7 @@ void setup()
         }
       }
       if (processedInput) {
-        createIndexHtml();
+        createAP_IndexHtml();
         request->send(200, "text/html", index_html.c_str());
       }
       if (allSet) {
@@ -274,12 +271,12 @@ void setup()
         preferences.end();
         ESP.restart();
       } });
-      server_AP.onNotFound(handle_NotFound);
-      server_AP.begin();
+      server.onNotFound(handle_NotFound);
+      server.begin();
     }
   } // end of getPrefs function
 
-  void createIndexHtml()
+  void createAP_IndexHtml()
   {
     bool allEntered = true;
     index_html = "";
