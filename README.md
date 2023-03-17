@@ -1,6 +1,10 @@
 ## Introduction
 This project will be an open source ESP32 based Wifi MQTT light switch. My interntion is to make a device that will fit into a "Decor" style switch box. Sonoff devices are interesting but they do not fit into a regular box allong side other non-smart switches. 
 
+The circuit boards are split into two. there is a power board that handles the converstion of the AC in to DC and providrs both 5volts DC and 3.3 volts DC to the controller board. The controller board has the ESP32 for control and the buttons for triggering. There is a "light" button and a "factory" button. the light button is of course used to turn the light on and off while the factory button is used to do a factory reset.
+
+The Preferences library is used to store the variables in the NV ram for retrieval after a power down.
+
 Right now this is the beginning. There is much more work to be done.
 
 ## Todo
