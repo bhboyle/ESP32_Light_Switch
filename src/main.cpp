@@ -14,12 +14,12 @@
 int LightButton = 15;              // The input pin of the button that triggers the relay
 int FactoryReset = 16;             // The input pin of the button that will trigger a factory reset
 int RelayPin = 20;                 // The output pin that will trigger the relay
-//                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7
-String variablesArray[8] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic"};
-String valuesArray[8] = {"", "", "", "", "", "", "", ""};
-int totalVariables = 8;
+//                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8
+String variablesArray[9] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState"};
+String valuesArray[9] = {"", "", "", "", "", "", "", "", ""};
+int totalVariables = 9;
 String index_html = "";
-const char *ssidAP = "ESP32";
+const char *ssidAP = "Boyle-Light";
 const char *passwordAP = "12345678";
 IPAddress local_ipAP(192, 168, 1, 1);
 IPAddress gatewayAP(192, 168, 1, 1);
@@ -49,15 +49,18 @@ void maintainMQTT();
 void setColor(int r, int g, int b);
 void getPrefs();
 bool ValidateIP(String IP);
-void createIndexHtml();
+void createAP_IndexHtml();
 void handleSwitch();
 void handle_NotFound(AsyncWebServerRequest *request);
+void doSwitch(int status);
 
 // Start of setup function
 void setup()
 {
 
   getPrefs();
+
+  // ArduinoOTA.setHostname(Hostname);
 
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
@@ -93,8 +96,18 @@ void setup()
   if (temp == 0)
   {
     relayStatus = !relayStatus;
-    digitalWrite(RelayPin, relayStatus);
+    doSwitch(relayStatus);
   }
+  }
+
+  void doSwitch(int status)
+  {
+    digitalWrite(RelayPin, status);
+    client.publish("Light/Status", String(status));
+    valuesArray[8] = status;
+    preferences.begin("configuration", false);
+    preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
+    preferences.end();
   }
 
   // MQTT callback function to handle any trigger events from the MQTT server
@@ -104,20 +117,17 @@ void setup()
   if (tempChar == "0")       // check if the payload is a zero
   {
     relayStatus = 0;
-    digitalWrite(RelayPin, relayStatus); // if it is a zero then turn off the light
-    client.publish("Light/Status", "0");
+    doSwitch(relayStatus);
   }
   else if (tempChar == "1") // if it is a one then turn on the light
   {
     relayStatus = 1;
-    digitalWrite(RelayPin, relayStatus);
-    client.publish("Light/Status", "1");
+    doSwitch(relayStatus);
   }
   else if (tempChar == "2") // if it is a 2 then toggle the light
   {
     relayStatus = !relayStatus;
-    digitalWrite(RelayPin, relayStatus);
-    client.publish("Light/Status", String(relayStatus));
+    doSwitch(relayStatus);
   }
   } // end of MQTTcallback function
 
@@ -233,7 +243,7 @@ void setup()
       WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
       delay(100);
 
-      createIndexHtml();
+      createAP_IndexHtml();
 
       server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                 { request->send_P(200, "text/html", index_html.c_str()); });
@@ -304,6 +314,10 @@ void setup()
       {
         _type = "text";
       }
+      if (i == 9)
+      {
+        _type = "hidden";
+      }
       if (inputError == i)
       {
         index_html.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
@@ -342,14 +356,11 @@ void setup()
   bool ValidateIP(String IP)
   {
     char *temp = (char *)IP.c_str();
-    if (std::regex_match(temp, std::regex("^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$")))
-    {
+    std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0- 9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
+    if (std::regex_match(temp, ipv4))
       return true;
-    }
     else
-    {
       return false;
-    }
   }
 
   void handle_NotFound(AsyncWebServerRequest *request)
