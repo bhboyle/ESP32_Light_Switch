@@ -21,7 +21,7 @@ Right now this is the beginning. There is much more work to be done.
 4. MQTT triggering via node-red
 5. Of course fits into a standard wall box in North America
 6. Standard Normally open switching and three way switching
-7. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. **This version of the board does not have this feature. Maybe the next sersion**
+7. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. **This version of the board does not have this feature. Maybe the next version**
 8. LED colors. Green - WIFI and MQTT connected, Red - Boot up, Yellow - WIFI connected
 9. Remember power state for power failures using preferences
 
