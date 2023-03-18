@@ -3,13 +3,15 @@ This project will be an open source ESP32 based Wifi MQTT light switch. My inten
 
 The circuit boards are split into two. There is a power board that handles the SPDT relay for AC switching, the conversion of the AC in to DC and provides both 5 volts DC and 3.3 volts DC to the controller board. The controller board has the ESP32 for control and the buttons for triggering. There is a "light" button and a "factory" button. The light button is of course used to turn the light on and off while the factory button is used to do a factory reset. There is a Neopixel on the control board to indicate the status of the device in addition to a dedicated power led.
 
+For safety and simplicity sake, I used the [Mean Well IRM-02-5](https://www.digikey.ca/en/products/detail/mean-well-usa-inc/IRM-02-5/7704628?s=N4IgTCBcDaIIwA4BsSC0BmADJgnKgcgCIgC6AvkA) 2 watt AC-DC converter. As with most things it is a compromise between simplicity, size, safety and cost. It is a little on the pricy side at $10 USD each but it makes it very simple to build the power supply and because it is a sealed housing it is nice and safe. This module creates 5 volts DC and I use a 1 amp LDO linear regulator the generate the 3.3 volts the ESP32 needs to operate.
+
 The Preferences library is used to store the variables in the NV ram for retrieval after a power down.
 
 Right now this is the beginning. There is much more work to be done.
 
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
-2. ~~Define the software requirements~~
+2. ~~Define the software requirements~~ **Done (at least for now)**
 3. Complete the software for the ESP32-S3
 4. Design the enclosure in Fusion 360
 5. Print and test the enclosure
