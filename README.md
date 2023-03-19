@@ -17,7 +17,7 @@ Right now this is the beginning. There is much more work to be done.
 5. Print and test the enclosure
 
 ## Features to add
-1. Over the Air updates if possible
+1. Over the Air updates
 2. Web server available at all times to look at status, variables and configuration
 3. Light switch works no matter what even before being configured
 4. MQTT triggering via node-red
