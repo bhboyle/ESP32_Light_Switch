@@ -18,7 +18,7 @@ int RelayPin = 20;                 // The output pin that will trigger the relay
 String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
 int totalVariables = 10;
-String index_html = "";
+String index_html_AP = "";
 const char *ssidAP = "Boyle-Light";
 const char *passwordAP = "12345678";
 IPAddress local_ipAP(192, 168, 1, 1);
@@ -36,6 +36,65 @@ char PublishTopic[32];
 char SubTopic[32];
 bool allSet = false; // used for checking the web page
 int inputError = -1;
+const char *PARAM_INPUT_1 = "state";
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP Web Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html {font-family: Arial; display: inline-block; text-align: center;}
+    h2 {font-size: 3.0rem;}
+    p {font-size: 3.0rem;}
+    body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
+    .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
+    .switch input {display: none}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px}
+    .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 68px}
+    input:checked+.slider {background-color: #2196F3}
+    input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
+  </style>
+</head>
+<body>
+  <h2>ESP Web Server</h2>
+  %BUTTONPLACEHOLDER%
+<script>function toggleCheckbox(element) {
+  var xhr = new XMLHttpRequest();
+  if(element.checked){ xhr.open("GET", "/update?state=1", true); }
+  else { xhr.open("GET", "/update?state=0", true); }
+  xhr.send();
+}
+
+setInterval(function ( ) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      var inputChecked;
+      var outputStateM;
+      if( this.responseText == 1){ 
+        inputChecked = true;
+        outputStateM = "On";
+      }
+      else { 
+        inputChecked = false;
+        outputStateM = "Off";
+      }
+      document.getElementById("output").checked = inputChecked;
+      document.getElementById("outputState").innerHTML = outputStateM;
+    }
+  };
+  xhttp.open("GET", "/state", true);
+  xhttp.send();
+}, 1000 ) ;
+</script>
+</body>
+</html>
+)rawliteral";
+
+
+
+
 
 // create objects
 WiFiClient wifiClient; // create the wifi object
@@ -54,6 +113,8 @@ void createAP_IndexHtml();
 void handleSwitch();
 void handle_NotFound(AsyncWebServerRequest *request);
 void doSwitch(int status);
+String outputState();
+String processor(const String &var);
 
 // HTTPSRedirect *client = nullptr;
 
@@ -250,6 +311,36 @@ void setup()
       checkWIFI();
 
       maintainMQTT();
+
+      // Route for root / web page
+      server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+                { request->send_P(200, "text/html", index_html, processor); });
+
+      // Send a GET request to <ESP_IP>/update?state=<inputMessage>
+      server_AP.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
+                {
+    String inputMessage;
+    String inputParam;
+    // GET input1 value on <ESP_IP>/update?state=<inputMessage>
+    if (request->hasParam(PARAM_INPUT_1)) {
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      inputParam = PARAM_INPUT_1;
+      //digitalWrite(output, inputMessage.toInt());
+      relayStatus = !relayStatus;
+      doSwitch(relayStatus);
+    }
+    else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+    Serial.println(inputMessage);
+    request->send(200, "text/plain", "OK"); });
+
+      // Send a GET request to <ESP_IP>/state
+      server_AP.on("/state", HTTP_GET, [](AsyncWebServerRequest *request)
+                { request->send(200, "text/plain", String(relayStatus).c_str()); });
+      // Start server
+      server_AP.begin();
     }
     else
     {
@@ -262,7 +353,7 @@ void setup()
       createAP_IndexHtml();
 
       server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-                   { request->send_P(200, "text/html", index_html.c_str()); });
+                   { request->send_P(200, "text/html", index_html_AP.c_str()); });
 
       server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
                    {
@@ -290,7 +381,7 @@ void setup()
       }
       if (processedInput) {
         createAP_IndexHtml();
-        request->send(200, "text/html", index_html.c_str());
+        request->send(200, "text/html", index_html_AP.c_str());
       }
       if (allSet) {
         delay(1000);
@@ -303,21 +394,22 @@ void setup()
     }
   } // end of getPrefs function
 
+  // This function generates the HTML for thw Access point mode at initial startup
   void createAP_IndexHtml()
   {
     bool allEntered = true;
-    index_html = "";
+    index_html_AP = "";
     String _type = "";
-    index_html.concat("<!DOCTYPE HTML>");
-    index_html.concat("<html>");
-    index_html.concat("<head>");
-    index_html.concat("<title>Smart Switch Configuration</title>");
-    index_html.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-    index_html.concat("</head>");
-    index_html.concat("<body>");
-    index_html.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
+    index_html_AP.concat("<!DOCTYPE HTML>");
+    index_html_AP.concat("<html>");
+    index_html_AP.concat("<head>");
+    index_html_AP.concat("<title>Smart Switch Configuration</title>");
+    index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+    index_html_AP.concat("</head>");
+    index_html_AP.concat("<body>");
+    index_html_AP.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
 
-    index_html.concat("<form action=\"/get\">");
+    index_html_AP.concat("<form action=\"/get\">");
     for (int i = 0; i < totalVariables; i++)
     {
       if (i == 8)
@@ -326,9 +418,9 @@ void setup()
       }
       else
       {
-        index_html.concat("<table>");
-        index_html.concat("<tr height='15px'>");
-        index_html.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
+        index_html_AP.concat("<table>");
+        index_html_AP.concat("<tr height='15px'>");
+        index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
         if (i == 1 || i == 5)
         {
         _type = "password";
@@ -339,40 +431,41 @@ void setup()
         }
         if (inputError == i)
         {
-        index_html.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
+        index_html_AP.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
         inputError = -1;
         }
         else
         {
-        index_html.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
+        index_html_AP.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
         }
         // index_html.concat("<input type=\"submit\" value=\"Submit\">");
-        index_html.concat("<br>");
+        index_html_AP.concat("<br>");
         if (valuesArray[i] == "")
         {
         allEntered = false;
         }
-        index_html.concat("</tr>");
-        index_html.concat("</table>");
+        index_html_AP.concat("</tr>");
+        index_html_AP.concat("</table>");
       }
     }
     if (allEntered)
     {
       preferences.putBool("configured", true);
       allSet = true;
-      index_html.concat("<H1>All fields are stored successfully. Please wait about 10 Seconds and then the device will be restarted.</H1><H1>If you need to change the settings you should reset the device.</H1>");
+      index_html_AP.concat("<H1>All fields are stored successfully. Please wait about 10 Seconds and then the device will be restarted.</H1><H1>If you need to change the settings you should reset the device.</H1>");
     }
     else
     {
       preferences.putBool("configured", false);
       allSet = false;
-      index_html.concat("<input type=\"submit\" value=\"Submit\">");
+      index_html_AP.concat("<input type=\"submit\" value=\"Submit\">");
     }
-    index_html.concat("</form>");
-    index_html.concat("</body>");
-    index_html.concat("</html>");
+    index_html_AP.concat("</form>");
+    index_html_AP.concat("</body>");
+    index_html_AP.concat("</html>");
   } // end of createIndexHtml function
 
+  // This function makes sure that the IP addresses that are entered in the config page are valid IP addresses
   bool ValidateIP(String IP)
   {
     char *temp = (char *)IP.c_str();
@@ -383,7 +476,35 @@ void setup()
       return false;
   }
 
+  // This function is an event handler for the wed server and it handles page requests for pages that do not exist
   void handle_NotFound(AsyncWebServerRequest *request)
   {
     request->send(404, "text/plain", "Not found");
+  }
+
+  // Replaces placeholder with button section in your web page
+  String processor(const String &var)
+  {
+    // Serial.println(var);
+    if (var == "BUTTONPLACEHOLDER")
+    {
+      String buttons = "";
+      String outputStateValue = outputState();
+      buttons += "<h4>Output - GPIO 2 - State <span id=\"outputState\"></span></h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
+      return buttons;
+    }
+    return String();
+  }
+
+  String outputState()
+  {
+    if (relayStatus)
+    {
+      return "checked";
+    }
+    else
+    {
+      return "";
+    }
+    return "";
   }
