@@ -14,16 +14,17 @@
 int LightButton = 15;              // The input pin of the button that triggers the relay
 int FactoryReset = 16;             // The input pin of the button that will trigger a factory reset
 int RelayPin = 20;                 // The output pin that will trigger the relay
-//                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8
-String variablesArray[9] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState"};
-String valuesArray[9] = {"", "", "", "", "", "", "", "", ""};
-int totalVariables = 9;
+//                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9
+String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
+String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
+int totalVariables = 10;
 String index_html = "";
 const char *ssidAP = "Boyle-Light";
 const char *passwordAP = "12345678";
 IPAddress local_ipAP(192, 168, 1, 1);
 IPAddress gatewayAP(192, 168, 1, 1);
 IPAddress subnetAP(255, 255, 255, 0);
+bool WifiAPStatus = false;
 bool relayStatus = 0;
 char ssid[32];
 char ssidPassword[32];
@@ -41,7 +42,7 @@ WiFiClient wifiClient; // create the wifi object
 MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
 Preferences preferences;
-AsyncWebServer server(80);
+AsyncWebServer server_AP(80);
 
 // function declarations
 void checkWIFI();
@@ -54,13 +55,13 @@ void handleSwitch();
 void handle_NotFound(AsyncWebServerRequest *request);
 void doSwitch(int status);
 
+// HTTPSRedirect *client = nullptr;
+
 // Start of setup function
 void setup()
 {
 
   getPrefs();
-
-  // ArduinoOTA.setHostname(Hostname);
 
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
@@ -135,42 +136,47 @@ void setup()
   void checkWIFI()
   {
 
-  if (WiFi.status() != WL_CONNECTED)
+  if (!WifiAPStatus)
   {
-
-    // Configures static IP address. We use a static IP because it connects to the network faster
-
-    // WiFi.reconnect();
-    WiFi.mode(WIFI_STA);        // set the WIFI mode to Station
-    WiFi.setHostname(Hostname); // Set the WIFI hostname of the device
-    WiFi.begin(ssid, ssidPassword); // connect to the WIFI
-
-    delay(100);
-
-    int count = 0; // create a variable that is used to set a timer for connecting to the WIFI
-    while (WiFi.status() != WL_CONNECTED)
-    {             // check if it is connected to the AP
-      delay(100); // wait 100 miliseconds
-      count++;    // Increment the counter variable
-      if (count > 30)
-      {
-        break;
-      } // it is had been trying to connect to the WIFI for 30 * 100 milliseconds then stop trying
-    }
-
-    // This second WIFI status is used to do indicate a failed connection and then put the ESP32 in deep sleep
     if (WiFi.status() != WL_CONNECTED)
-    { // if it can not connect to the wifi
-      // write the boot verion and count into eeprom and reboot
+    {
 
-      ESP.restart();
+      // Configures static IP address. We use a static IP because it connects to the network faster
+
+      // WiFi.reconnect();
+      WiFi.mode(WIFI_STA);            // set the WIFI mode to Station
+      WiFi.setHostname(Hostname);     // Set the WIFI hostname of the device
+      WiFi.begin(ssid, ssidPassword); // connect to the WIFI
+
+      delay(100);
+
+      int count = 0; // create a variable that is used to set a timer for connecting to the WIFI
+      while (WiFi.status() != WL_CONNECTED)
+      {             // check if it is connected to the AP
+        delay(100); // wait 100 miliseconds
+        count++;    // Increment the counter variable
+        if (count > 30)
+        {
+          break;
+        } // it is had been trying to connect to the WIFI for 30 * 100 milliseconds then stop trying
+      }
+
+      // This second WIFI status is used to do indicate a failed connection and then put the ESP32 in deep sleep
+      if (WiFi.status() != WL_CONNECTED)
+      { // if it can not connect to the wifi
+        // write the boot verion and count into eeprom and reboot
+
+        ESP.restart();
+      }
+      setColor(255, 255, 0); // Set LED to Yellow
     }
-    setColor(255, 255, 0); // Set LED to Yellow
   }
   } // end of checkwifi function
 
   // This function starts the MQTT connection and if it is already connected it will maintain the connection
   void maintainMQTT()
+  {
+  if (!WifiAPStatus)
   {
     if (client.connected()) // used to maintain the MQTT connection
     {
@@ -193,6 +199,7 @@ void setup()
         setColor(0, 255, 0); // Set LED to Green
       }
     }
+  }
   } // end of maintainMQTT function
 
   // This function sets the color of the NEOPixel LED. It must be called with
@@ -232,6 +239,13 @@ void setup()
       valuesArray[6].toCharArray(PublishTopic, temp);
       temp = valuesArray[7].length() + 1;
       valuesArray[7].toCharArray(SubTopic, temp);
+      temp = valuesArray[8].length() + 1;
+      char temp2[5];
+      valuesArray[8].toCharArray(temp2, temp);
+      relayStatus = atoi(temp2);
+      doSwitch(relayStatus);
+      valuesArray[9].toCharArray(temp2, temp);
+      pixels.setBrightness(atoi(temp2));
 
       checkWIFI();
 
@@ -241,15 +255,16 @@ void setup()
     {
       WiFi.softAP(ssidAP, passwordAP);
       WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
+      WifiAPStatus = true;
       delay(100);
 
       createAP_IndexHtml();
 
-      server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-                { request->send_P(200, "text/html", index_html.c_str()); });
+      server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+                   { request->send_P(200, "text/html", index_html.c_str()); });
 
-      server.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
-                {
+      server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
+                   {
       bool processedInput = false;
       for (int i = 0; i < totalVariables; i++) {
         if (request->hasParam(variablesArray[i])) {
@@ -281,8 +296,9 @@ void setup()
         preferences.end();
         ESP.restart();
       } });
-      server.onNotFound(handle_NotFound);
-      server.begin();
+      server_AP.onNotFound(handle_NotFound);
+      server_AP.begin();
+      // handleSwitch();
     }
   } // end of getPrefs function
 
@@ -298,43 +314,46 @@ void setup()
     index_html.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
     index_html.concat("</head>");
     index_html.concat("<body>");
-    index_html.concat("<h1> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h1>");
+    index_html.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
 
     index_html.concat("<form action=\"/get\">");
     for (int i = 0; i < totalVariables; i++)
     {
-      index_html.concat("<table>");
-      index_html.concat("<tr height='15px'>");
-      index_html.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
-      if (i == 1 || i == 5)
+      if (i == 8)
       {
-        _type = "password";
+        // for the relayState item do not show it.
       }
       else
       {
+        index_html.concat("<table>");
+        index_html.concat("<tr height='15px'>");
+        index_html.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
+        if (i == 1 || i == 5)
+        {
+        _type = "password";
+        }
+        else
+        {
         _type = "text";
-      }
-      if (i == 9)
-      {
-        _type = "hidden";
-      }
-      if (inputError == i)
-      {
+        }
+        if (inputError == i)
+        {
         index_html.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
         inputError = -1;
-      }
-      else
-      {
+        }
+        else
+        {
         index_html.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
-      }
-      // index_html.concat("<input type=\"submit\" value=\"Submit\">");
-      index_html.concat("<br>");
-      if (valuesArray[i] == "")
-      {
+        }
+        // index_html.concat("<input type=\"submit\" value=\"Submit\">");
+        index_html.concat("<br>");
+        if (valuesArray[i] == "")
+        {
         allEntered = false;
+        }
+        index_html.concat("</tr>");
+        index_html.concat("</table>");
       }
-      index_html.concat("</tr>");
-      index_html.concat("</table>");
     }
     if (allEntered)
     {
