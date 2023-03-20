@@ -253,6 +253,7 @@ void setup()
     }
     else
     {
+      setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
       WiFi.softAP(ssidAP, passwordAP);
       WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
       WifiAPStatus = true;
