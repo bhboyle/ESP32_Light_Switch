@@ -5,15 +5,17 @@
 #include <MQTT.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <nvs_flash.h>
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
+// #define debug
 
 // variables
 
-int LightButton = 15;              // The input pin of the button that triggers the relay
-int FactoryReset = 16;             // The input pin of the button that will trigger a factory reset
-int RelayPin = 20;                 // The output pin that will trigger the relay
+int LightButton = 15;  // The input pin of the button that triggers the relay
+int FactoryReset = 16; // The input pin of the button that will trigger a factory reset
+int RelayPin = 20;     // The output pin that will trigger the relay
 //                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9
 String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
@@ -36,6 +38,8 @@ char PublishTopic[32];
 char SubTopic[32];
 bool allSet = false; // used for checking the web page
 int inputError = -1;
+unsigned long button_press_time = 0;
+unsigned long button_release_time = 0;
 const char *PARAM_INPUT_1 = "state";
 
 const char index_html[] PROGMEM = R"rawliteral(
@@ -45,19 +49,37 @@ const char index_html[] PROGMEM = R"rawliteral(
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html {font-family: Arial; display: inline-block; text-align: center;}
-    h2 {font-size: 3.0rem;}
+    h2 {font-size: 1.5rem;}
     p {font-size: 3.0rem;}
+    div#top-right {position: absolute; bottom: -55px; right: 0px}
     body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
     .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
     .switch input {display: none}
-    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px; transform: rotate(-90deg)}
     .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 68px}
     input:checked+.slider {background-color: #2196F3}
     input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
+    .wave {
+        display: inline-block;
+        border: 10px solid transparent;
+        border-top-color: currentColor;
+        border-radius: 50%%;
+        border-style: solid;
+        margin: 5px;
+    }
+    .waveStrength-3 .wv4.wave,
+    .waveStrength-2 .wv4.wave,
+    .waveStrength-2 .wv3.wave,
+    .waveStrength-1 .wv4.wave,
+    .waveStrength-1 .wv3.wave,
+    .waveStrength-1 .wv2.wave {
+        border-top-color: #eee;
+    }
   </style>
 </head>
 <body>
-  <h2>ESP Web Server</h2>
+  <h2>Boyle smart light switch</h2>
+  <div id=top-right>%SIGNALSTRENGTH%</div>
   %BUTTONPLACEHOLDER%
 <script>function toggleCheckbox(element) {
   var xhr = new XMLHttpRequest();
@@ -111,12 +133,16 @@ void handle_NotFound(AsyncWebServerRequest *request);
 void doSwitch(int status);
 String outputState();
 String processor(const String &var);
+void checkFactoryReset();
 
 // HTTPSRedirect *client = nullptr;
 
 // Start of setup function
 void setup()
 {
+#ifdef debug
+  Serial.begin(115200);
+#endif
 
   getPrefs();
 
@@ -143,9 +169,11 @@ void loop()
 
   handleSwitch();
 
+  checkFactoryReset();
+
 } // End of main loop function
 
-// ****** Functions begin here
+// ****** Functions begin here   ***********
 
 // this function check is the switch button is pressed and toggles the light is it has
 void handleSwitch()
@@ -200,10 +228,11 @@ void doSwitch(int status)
     if (WiFi.status() != WL_CONNECTED)
     {
 
-      // Configures static IP address. We use a static IP because it connects to the network faster
+#ifdef debug
+      Serial.print("Hostname = ");
+      Serial.println(Hostname);
+#endif
 
-      // WiFi.reconnect();
-      WiFi.mode(WIFI_STA);            // set the WIFI mode to Station
       WiFi.setHostname(Hostname);     // Set the WIFI hostname of the device
       WiFi.begin(ssid, ssidPassword); // connect to the WIFI
 
@@ -270,131 +299,182 @@ void doSwitch(int status)
   } // end of setColor function
 
   // This function will get the preferences from the ESP32 NV storage and if it has not yet been configured it will
-  // out the ESP32 in AP mode and start up a webpage to get it configured
+  // put the ESP32 in AP mode and start up a webpage to get it configured
   void getPrefs()
   {
+#ifdef debug
+    Serial.println("Getprefs Start");
+#endif
     preferences.begin("configuration", false);
     bool configured = preferences.getBool("configured", false);
     if (configured)
     {
-      for (int i = 0; i < totalVariables; i++)
+#ifdef debug
+    Serial.println("Configured Start");
+#endif
+
+    for (int i = 0; i < totalVariables; i++)
+    {
+      valuesArray[i] = preferences.getString((variablesArray[i]).c_str(), "");
+    }
+
+    // put variable into usable variable in the right format
+    int temp = valuesArray[0].length() + 1;
+    valuesArray[0].toCharArray(ssid, temp);
+    temp = valuesArray[1].length() + 1;
+    valuesArray[1].toCharArray(ssidPassword, temp);
+    temp = valuesArray[2].length() + 1;
+    valuesArray[2].toCharArray(Hostname, temp);
+    MQTTserver.fromString(valuesArray[3]);
+    temp = valuesArray[4].length() + 1;
+    valuesArray[4].toCharArray(MQTTuser, temp);
+    temp = valuesArray[5].length() + 1;
+    valuesArray[5].toCharArray(MQTTpass, temp);
+    temp = valuesArray[6].length() + 1;
+    valuesArray[6].toCharArray(PublishTopic, temp);
+    temp = valuesArray[7].length() + 1;
+    valuesArray[7].toCharArray(SubTopic, temp);
+    temp = valuesArray[8].length() + 1;
+    char temp2[5];
+    valuesArray[8].toCharArray(temp2, temp);
+    relayStatus = atoi(temp2);
+    doSwitch(relayStatus);
+    valuesArray[9].toCharArray(temp2, temp);
+    pixels.setBrightness(atoi(temp2));
+#ifdef debug
+    Serial.println("Variables retrieved");
+#endif
+
+    checkWIFI();
+#ifdef debug
+    Serial.println("Wifi start completed");
+    Serial.println(WiFi.localIP());
+#endif
+    maintainMQTT();
+
+    // Route for root / web page   ****Start web server for configured switch
+    server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+                 { request->send_P(200, "text/html", index_html, processor); });
+
+    // Send a GET request to <ESP_IP>/update?state=<inputMessage>
+    // used to change the switch state via http
+    server_AP.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      String inputMessage;
+      String inputParam;
+      // GET input1 value on <ESP_IP>/update?state=<inputMessage>
+      if (request->hasParam(PARAM_INPUT_1)) {
+        inputMessage = request->getParam(PARAM_INPUT_1)->value();
+        inputParam = PARAM_INPUT_1;
+        relayStatus = !relayStatus;
+        doSwitch(relayStatus);
+      }
+      else
       {
-        valuesArray[i] = preferences.getString((variablesArray[i]).c_str(), "");
+        inputMessage = "No message sent";
+        inputParam = "none";
       }
 
-      // put variable into usable variable in the right format
-      int temp = valuesArray[0].length() + 1;
-      valuesArray[0].toCharArray(ssid, temp);
-      temp = valuesArray[1].length() + 1;
-      valuesArray[1].toCharArray(ssidPassword, temp);
-      temp = valuesArray[2].length() + 1;
-      valuesArray[2].toCharArray(Hostname, temp);
-      MQTTserver.fromString(valuesArray[3]);
-      temp = valuesArray[4].length() + 1;
-      valuesArray[4].toCharArray(MQTTuser, temp);
-      temp = valuesArray[5].length() + 1;
-      valuesArray[5].toCharArray(MQTTpass, temp);
-      temp = valuesArray[6].length() + 1;
-      valuesArray[6].toCharArray(PublishTopic, temp);
-      temp = valuesArray[7].length() + 1;
-      valuesArray[7].toCharArray(SubTopic, temp);
-      temp = valuesArray[8].length() + 1;
-      char temp2[5];
-      valuesArray[8].toCharArray(temp2, temp);
-      relayStatus = atoi(temp2);
-      doSwitch(relayStatus);
-      valuesArray[9].toCharArray(temp2, temp);
-      pixels.setBrightness(atoi(temp2));
+      request->send(200, "text/plain", "OK"); });
 
-      checkWIFI();
-
-      maintainMQTT();
-
-      // Route for root / web page
-      server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-                { request->send_P(200, "text/html", index_html, processor); });
-
-      // Send a GET request to <ESP_IP>/update?state=<inputMessage>
-      server_AP.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
-                {
-    String inputMessage;
-    String inputParam;
-    // GET input1 value on <ESP_IP>/update?state=<inputMessage>
-    if (request->hasParam(PARAM_INPUT_1)) {
-      inputMessage = request->getParam(PARAM_INPUT_1)->value();
-      inputParam = PARAM_INPUT_1;
-      //digitalWrite(output, inputMessage.toInt());
-      relayStatus = !relayStatus;
-      doSwitch(relayStatus);
-    }
-    else {
-      inputMessage = "No message sent";
-      inputParam = "none";
-    }
-    Serial.println(inputMessage);
-    request->send(200, "text/plain", "OK"); });
-
-      // Send a GET request to <ESP_IP>/state
-      server_AP.on("/state", HTTP_GET, [](AsyncWebServerRequest *request)
-                { request->send(200, "text/plain", String(relayStatus).c_str()); });
-      // Start server
-      server_AP.begin();
+    // Send a GET request to <ESP_IP>/state
+    // used to get the status of the switch state via HTTP
+    server_AP.on("/state", HTTP_GET, [](AsyncWebServerRequest *request)
+                 { request->send(200, "text/plain", String(relayStatus).c_str()); });
+    // Start server
+    server_AP.begin();
+#ifdef debug
+    Serial.println("Main web server Started");
+#endif
     }
     else // if the board is not configured then do the following
     {
-      setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
-      WiFi.softAP(ssidAP, passwordAP);
-      WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
-      WifiAPStatus = true;
-      delay(100);
+#ifdef debug
+    Serial.println("Not configured");
+#endif
+    setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
+    WiFi.softAP(ssidAP, passwordAP);
+    WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
+    WifiAPStatus = true;
+    delay(100);
 
-      createAP_IndexHtml();
+#ifdef debug
+    Serial.println("Access pointed started");
+#endif
 
-      server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-                   { request->send_P(200, "text/html", index_html_AP.c_str()); });
+    createAP_IndexHtml();
 
-      server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
-                   {
-      bool processedInput = false;
-      for (int i = 0; i < totalVariables; i++) {
-        if (request->hasParam(variablesArray[i])) {
-          if (i == 3)
-          {
-            if (ValidateIP(request->getParam(variablesArray[i])->value())) {
-              valuesArray[i] = request->getParam(variablesArray[i])->value();
-              preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
-              processedInput = true;
-            }
-            else {  //show error message about the invalid input
-              inputError = i;
-              processedInput = true;
-            }
-          }
-          else if (i == 8)
-          {
-            valuesArray[i] = "0";
-            preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
-          }
-          else
+#ifdef debug
+    Serial.println("Create Index_AP HTML completed");
+#endif
+
+    server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+                 { request->send_P(200, "text/html", index_html_AP.c_str()); });
+
+#ifdef debug
+    Serial.println("Root webserver started");
+#endif
+
+    server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+#ifdef debug
+    Serial.println("Get page start");
+#endif
+    bool processedInput = false;
+    for (int i = 0; i < totalVariables; i++)
+    {
+      if (request->hasParam(variablesArray[i]))
+      {
+        if (i == 3)
+        {
+          if (ValidateIP(request->getParam(variablesArray[i])->value()))
           {
             valuesArray[i] = request->getParam(variablesArray[i])->value();
             preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
             processedInput = true;
           }
+          else
+          { // show error message about the invalid input
+            inputError = i;
+            processedInput = true;
+          }
+        }
+        else if (i == 8)
+        {
+          valuesArray[i] = "0";
+          preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
+        }
+        else
+        {
+          valuesArray[i] = request->getParam(variablesArray[i])->value();
+          preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
+          processedInput = true;
         }
       }
-      if (processedInput) {
-        createAP_IndexHtml();
-        request->send(200, "text/html", index_html_AP.c_str());
-      }
-      if (allSet) {
-        delay(1000);
-        preferences.end();
-        ESP.restart();
-      } });
-      server_AP.onNotFound(handle_NotFound);
-      server_AP.begin();
-      // handleSwitch();
+    }
+    if (processedInput)
+    {
+#ifdef debug
+      Serial.println("Processed input true");
+#endif
+      createAP_IndexHtml();
+      request->send(200, "text/html", index_html_AP.c_str());
+    }
+    if (allSet)
+    {
+#ifdef debug
+      Serial.println("ALLSET true");
+#endif
+      preferences.end();
+      delay(10000);
+      ESP.restart();
+    } });
+    server_AP.onNotFound(handle_NotFound);
+    server_AP.begin();
+    // handleSwitch();
+#ifdef debug
+    Serial.println("End of not configured");
+#endif
     }
   } // end of getPrefs function
 
@@ -422,7 +502,7 @@ void doSwitch(int status)
         index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
         if (i == 1 || i == 5)
         {
-        _type = "password";
+      _type = "password";
         }
         else
         {
@@ -445,7 +525,8 @@ void doSwitch(int status)
         }
         index_html_AP.concat("</tr>");
         index_html_AP.concat("</table>");
-        }
+    }
+
     if (allEntered)
     {
       preferences.putBool("configured", true);
@@ -458,6 +539,7 @@ void doSwitch(int status)
       allSet = false;
       index_html_AP.concat("<input type=\"submit\" value=\"Submit\">");
     }
+
     index_html_AP.concat("</form>");
     index_html_AP.concat("</body>");
     index_html_AP.concat("</html>");
@@ -466,12 +548,13 @@ void doSwitch(int status)
   // This function makes sure that the IP addresses that are entered in the config page are valid IP addresses
   bool ValidateIP(String IP)
   {
-    char *temp = (char *)IP.c_str();
-    std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0- 9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
-    if (std::regex_match(temp, ipv4))
-      return true;
-    else
-      return false;
+    // ********* This needs to be fixed. It was crashing the ESP32 when a configuration was sent.*********
+    // char *temp = (char *)IP.c_str();
+    // std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0- 9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
+    // if (std::regex_match(temp, ipv4))
+    return true;
+    // else
+    // return false;
   }
 
   // This function is an event handler for the wed server and it handles page requests for pages that do not exist
@@ -488,8 +571,21 @@ void doSwitch(int status)
     {
       String buttons = "";
       String outputStateValue = outputState();
-      buttons += "<h4>Output - GPIO 2 - State <span id=\"outputState\"></span></h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
+      buttons += "<h4>The light is <span id=\"outputState\"></span></h4><br><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
       return buttons;
+    }
+    if (var == "SIGNALSTRENGTH")
+    {
+      String WIFI = "";
+      int rssi = WiFi.RSSI();
+      int strength = map(rssi, -100, 0, 0, 4);
+      WIFI.concat(String(rssi) + "<div class = 'waveStrength-" + String(strength) + "'>"); //    + String(strength) + "'>");
+      WIFI.concat("<div class = 'wv4 wave' style = ''>");
+      WIFI.concat("<div class = 'wv3 wave' style = ''>");
+      WIFI.concat("<div class = 'wv2 wave' style = ''>");
+      WIFI.concat("<div class = 'wv1 wave'>");
+      WIFI.concat("</div></div></div></div></div> ");
+      return WIFI;
     }
     return String();
   }
@@ -505,4 +601,39 @@ void doSwitch(int status)
       return "";
     }
     return "";
+  }
+
+  // This function checks if the FactoryReset button is pressed and
+  // if it is pressed for more than 10 seconds it will erase the
+  // preferences and reboot the ESP32
+  void checkFactoryReset()
+  {
+    if (digitalRead(FactoryReset) == LOW)
+    {
+      if (button_press_time == 0)
+      {
+          button_press_time = millis();
+          Serial.println("button pressed.");
+      }
+      if (millis() - button_press_time > 10000)
+      {
+          for (int i = 0; i < 10; i++)
+          {
+        setColor(255, 0, 0);
+        delay(250);
+        setColor(0, 0, 0);
+        delay(250);
+          }
+          button_press_time = 0;
+          nvs_flash_erase();
+          nvs_flash_init();
+          ESP.restart();
+      }
+    }
+
+    // make sure that if the button is not pressed the button_press_time variable is reset
+    if (digitalRead(FactoryReset))
+    {
+      button_press_time = 0;
+    }
   }
