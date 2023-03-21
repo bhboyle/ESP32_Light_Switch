@@ -92,10 +92,6 @@ setInterval(function ( ) {
 </html>
 )rawliteral";
 
-
-
-
-
 // create objects
 WiFiClient wifiClient; // create the wifi object
 MQTTClient client;     // create the MQTT client object
@@ -135,11 +131,11 @@ void setup()
 
   setColor(255, 0, 0); // Set LED to red
 
-  } // end of setup function
+} // end of setup function
 
-  // main loop function
-  void loop()
-  {
+// main loop function
+void loop()
+{
 
   checkWIFI();
 
@@ -147,30 +143,32 @@ void setup()
 
   handleSwitch();
 
-  } // End of main loop function
+} // End of main loop function
 
-  // ****** Functions begin here
+// ****** Functions begin here
 
-  // this function check is the switch button is pressed and toggles the light is it has
-  void handleSwitch()
-  {
+// this function check is the switch button is pressed and toggles the light is it has
+void handleSwitch()
+{
   int temp = digitalRead(LightButton);
   if (temp == 0)
   {
     relayStatus = !relayStatus;
     doSwitch(relayStatus);
   }
-  }
+}
 
-  void doSwitch(int status)
-  {
-    digitalWrite(RelayPin, status);
-    client.publish("Light/Status", String(status));
-    valuesArray[8] = status;
-    preferences.begin("configuration", false);
-    preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
-    preferences.end();
-  }
+// This function changes the relay output pin to the new state, publishes the new state
+// to the MQTT server and stores the current state in NVram
+void doSwitch(int status)
+{
+  digitalWrite(RelayPin, status);
+  client.publish("Light/Status", String(status));
+  valuesArray[8] = status;
+  preferences.begin("configuration", false);
+  preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
+  preferences.end();
+}
 
   // MQTT callback function to handle any trigger events from the MQTT server
   void MQTTcallBack(String topic, String payload)
@@ -272,7 +270,7 @@ void setup()
   } // end of setColor function
 
   // This function will get the preferences from the ESP32 NV storage and if it has not yet been configured it will
-  // out the ESP32 in AP mode to get it configured
+  // out the ESP32 in AP mode and start up a webpage to get it configured
   void getPrefs()
   {
     preferences.begin("configuration", false);
@@ -342,7 +340,7 @@ void setup()
       // Start server
       server_AP.begin();
     }
-    else
+    else // if the board is not configured then do the following
     {
       setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
       WiFi.softAP(ssidAP, passwordAP);
@@ -372,7 +370,13 @@ void setup()
               processedInput = true;
             }
           }
-          else {
+          else if (i == 8)
+          {
+            valuesArray[i] = "0";
+            preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
+          }
+          else
+          {
             valuesArray[i] = request->getParam(variablesArray[i])->value();
             preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
             processedInput = true;
@@ -412,12 +416,7 @@ void setup()
     index_html_AP.concat("<form action=\"/get\">");
     for (int i = 0; i < totalVariables; i++)
     {
-      if (i == 8)
-      {
-        // for the relayState item do not show it.
-      }
-      else
-      {
+
         index_html_AP.concat("<table>");
         index_html_AP.concat("<tr height='15px'>");
         index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
@@ -427,27 +426,26 @@ void setup()
         }
         else
         {
-        _type = "text";
+          _type = "text";
         }
         if (inputError == i)
         {
-        index_html_AP.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
-        inputError = -1;
+          index_html_AP.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
+          inputError = -1;
         }
         else
         {
-        index_html_AP.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
+          index_html_AP.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
         }
         // index_html.concat("<input type=\"submit\" value=\"Submit\">");
         index_html_AP.concat("<br>");
         if (valuesArray[i] == "")
         {
-        allEntered = false;
+          allEntered = false;
         }
         index_html_AP.concat("</tr>");
         index_html_AP.concat("</table>");
-      }
-    }
+        }
     if (allEntered)
     {
       preferences.putBool("configured", true);
