@@ -6,6 +6,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <nvs_flash.h>
+#include <ArduinoJson.h>
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
@@ -45,7 +46,7 @@ const char *PARAM_INPUT_1 = "state";
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
-  <title>ESP Web Server</title>
+  <title>Boyle Smart Switch</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html {font-family: Arial; display: inline-block; text-align: center;}
@@ -53,9 +54,9 @@ const char index_html[] PROGMEM = R"rawliteral(
     p {font-size: 3.0rem;}
     div#top-right {position: absolute; bottom: -55px; right: 0px}
     body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
-    .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
+    .switch {position: relative; display: inline-block; width: 120px; height: 68px; transform: rotate(-90deg)} 
     .switch input {display: none}
-    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px; transform: rotate(-90deg)}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 34px}
     .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 68px}
     input:checked+.slider {background-color: #2196F3}
     input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
@@ -377,10 +378,19 @@ void doSwitch(int status)
 
       request->send(200, "text/plain", "OK"); });
 
-    // Send a GET request to <ESP_IP>/state
-    // used to get the status of the switch state via HTTP
     server_AP.on("/state", HTTP_GET, [](AsyncWebServerRequest *request)
                  { request->send(200, "text/plain", String(relayStatus).c_str()); });
+
+    // Send a GET request to <ESP_IP>/state
+    // used to get the status of the switch state via HTTP
+    server_AP.on("/info", HTTP_GET, [](AsyncWebServerRequest *request)
+                 { 
+                    StaticJsonDocument<200> doc;
+                    doc["relayState"] = relayStatus;
+                    doc["WiFiStrength"] = WiFi.RSSI();
+                    char buffer[256];
+                    serializeJson(doc, buffer);
+                    request->send(200, "text/plain", buffer); });
     // Start server
     server_AP.begin();
 #ifdef debug
@@ -578,7 +588,20 @@ void doSwitch(int status)
     {
       String WIFI = "";
       int rssi = WiFi.RSSI();
-      int strength = map(rssi, -100, 0, 0, 4);
+      int strength;
+      if (rssi <= -100)
+      {
+          strength = 0;
+      }
+      else if (rssi >= -50)
+      {
+          strength = 100;
+      }
+      else
+      {
+          strength = map((2 * (rssi + 100)), 0, 100, 0, 4);
+      }
+
       WIFI.concat(String(rssi) + "<div class = 'waveStrength-" + String(strength) + "'>"); //    + String(strength) + "'>");
       WIFI.concat("<div class = 'wv4 wave' style = ''>");
       WIFI.concat("<div class = 'wv3 wave' style = ''>");
