@@ -18,12 +18,12 @@ Right now this is the beginning. There is much more work to be done.
 
 ## Features to add
 1. Over the Air updates
-2. Web server available at all times to look at status, variables and configuration
-3. Light switch works no matter what even before being configured
+2. ~~Web server available at all times to look at status, variables and configuration~~
+3. ~~Light switch works no matter what even before being configured~~
 4. MQTT triggering via node-red
-5. Triggering via Wed interface
+5. ~~Triggering via Wed interface~~
 6. Fits into a standard wall box in North America
-7. Standard Normally open switching and three way switching
+7. ~~Standard Normally open switching and three way switching~~
 8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. **This version of the board does not have this feature. Maybe the next version**
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
 10. Remember power state for power failures using preferences
