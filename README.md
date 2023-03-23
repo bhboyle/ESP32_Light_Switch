@@ -24,7 +24,7 @@ Right now this is the beginning. There is much more work to be done.
 5. ~~Triggering via Wed interface~~
 6. Fits into a standard wall box in North America
 7. ~~Standard Normally open switching and three way switching~~
-8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. **This version of the board does not have this feature. Maybe the next version**
+8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on. **This version of the board does not have this feature. Maybe the next version**
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
 10. Remember power state for power failures using preferences
 
