@@ -21,28 +21,31 @@ int RelayPin = 20;     // The output pin that will trigger the relay
 String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
 int totalVariables = 10;
-String index_html_AP = "";
-const char *ssidAP = "Boyle-Light";
-const char *passwordAP = "12345678";
-IPAddress local_ipAP(192, 168, 1, 1);
+String index_html_AP = "";            // String that will hold the web page code if the switch is not configured
+const char *ssidAP = "Boyle-Light";   // Access point SSID if the switch is not configured
+const char *passwordAP = "12345678";  // Access point password if the switch is not configured
+IPAddress local_ipAP(192, 168, 1, 1); // Access point IP, Netmask and gateway settings  if not configured
 IPAddress gatewayAP(192, 168, 1, 1);
 IPAddress subnetAP(255, 255, 255, 0);
-bool WifiAPStatus = false;
-bool relayStatus = 0;
-char ssid[32];
-char ssidPassword[32];
-char Hostname[32];
+bool WifiAPStatus = false; // used to track if in access point mode or not and if not then connect to the configured network
+bool relayStatus = 0;      // used to hold the status of the relay
+char ssid[32];             // SSID variable for connecting to the configured network
+char ssidPassword[32];     // SSID password for connecting to the configured network
+char Hostname[32];         // The hostname of the device used for the DNS settings and the MQTT server
 IPAddress MQTTserver; // address of the MQTT server
-char MQTTuser[32];
-char MQTTpass[32];
-char PublishTopic[32];
-char SubTopic[32];
+char MQTTuser[32];    // username for connecting to the MQTT server
+char MQTTpass[32];    // Password for connecting to the MQTT server
+char PublishTopic[32]; // The MQTT topic that the device will publish to with the status of the relay or other things.
+char SubTopic[32];     // MQTT topic that we will subscribe to for triggering
 bool allSet = false; // used for checking the web page
 int inputError = -1;
-unsigned long button_press_time = 0;
-unsigned long button_release_time = 0;
-const char *PARAM_INPUT_1 = "state";
+unsigned long button_press_time = 0;   // used to debouncing the buttons
+unsigned long button_release_time = 0; // also used for debouncing the buttons
+const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
 
+// The following raw literal is holding the web page that is used when the switch is configured. This web page displays
+// a visual representation of the switch that lets you turn the light on and off. It also updates the on screen switch
+// if you push the button
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
@@ -115,7 +118,7 @@ setInterval(function ( ) {
 </html>
 )rawliteral";
 
-// create objects
+// Object constructors
 WiFiClient wifiClient; // create the wifi object
 MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
@@ -123,6 +126,7 @@ Preferences preferences;
 AsyncWebServer server_AP(80);
 
 // function declarations
+
 void checkWIFI();
 void maintainMQTT();
 void setColor(int r, int g, int b);
@@ -174,9 +178,13 @@ void loop()
 
 } // End of main loop function
 
-// ****** Functions begin here   ***********
+/*
 
-// this function check is the switch button is pressed and toggles the light is it has
+****** Functions begin here   ***********
+
+*/
+
+// This function check is the switch button is pressed and toggles the light is it has
 void handleSwitch()
 {
   int temp = digitalRead(LightButton);
@@ -185,7 +193,7 @@ void handleSwitch()
     relayStatus = !relayStatus;
     doSwitch(relayStatus);
   }
-}
+} // end of handleSwitch function
 
 // This function changes the relay output pin to the new state, publishes the new state
 // to the MQTT server and stores the current state in NVram
@@ -197,7 +205,7 @@ void doSwitch(int status)
   preferences.begin("configuration", false);
   preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
   preferences.end();
-}
+} // end of doSwitch function
 
   // MQTT callback function to handle any trigger events from the MQTT server
   void MQTTcallBack(String topic, String payload)
@@ -303,16 +311,10 @@ void doSwitch(int status)
   // put the ESP32 in AP mode and start up a webpage to get it configured
   void getPrefs()
   {
-#ifdef debug
-    Serial.println("Getprefs Start");
-#endif
     preferences.begin("configuration", false);
     bool configured = preferences.getBool("configured", false);
     if (configured)
     {
-#ifdef debug
-    Serial.println("Configured Start");
-#endif
 
     for (int i = 0; i < totalVariables; i++)
     {
@@ -342,18 +344,12 @@ void doSwitch(int status)
     doSwitch(relayStatus);
     valuesArray[9].toCharArray(temp2, temp);
     pixels.setBrightness(atoi(temp2));
-#ifdef debug
-    Serial.println("Variables retrieved");
-#endif
 
     checkWIFI();
-#ifdef debug
-    Serial.println("Wifi start completed");
-    Serial.println(WiFi.localIP());
-#endif
+
     maintainMQTT();
 
-    // Route for root / web page   ****Start web server for configured switch
+    // Route for root / web page   ****Start web server if the switch is configured
     server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                  { request->send_P(200, "text/html", index_html, processor); });
 
@@ -393,43 +389,22 @@ void doSwitch(int status)
                     request->send(200, "text/plain", buffer); });
     // Start server
     server_AP.begin();
-#ifdef debug
-    Serial.println("Main web server Started");
-#endif
     }
     else // if the board is not configured then do the following
     {
-#ifdef debug
-    Serial.println("Not configured");
-#endif
     setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
     WiFi.softAP(ssidAP, passwordAP);
     WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
     WifiAPStatus = true;
     delay(100);
 
-#ifdef debug
-    Serial.println("Access pointed started");
-#endif
-
     createAP_IndexHtml();
-
-#ifdef debug
-    Serial.println("Create Index_AP HTML completed");
-#endif
 
     server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                  { request->send_P(200, "text/html", index_html_AP.c_str()); });
 
-#ifdef debug
-    Serial.println("Root webserver started");
-#endif
-
     server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
                  {
-#ifdef debug
-    Serial.println("Get page start");
-#endif
     bool processedInput = false;
     for (int i = 0; i < totalVariables; i++)
     {
@@ -464,17 +439,11 @@ void doSwitch(int status)
     }
     if (processedInput)
     {
-#ifdef debug
-      Serial.println("Processed input true");
-#endif
       createAP_IndexHtml();
       request->send(200, "text/html", index_html_AP.c_str());
     }
     if (allSet)
     {
-#ifdef debug
-      Serial.println("ALLSET true");
-#endif
       preferences.end();
       delay(10000);
       ESP.restart();
@@ -482,9 +451,6 @@ void doSwitch(int status)
     server_AP.onNotFound(handle_NotFound);
     server_AP.begin();
     // handleSwitch();
-#ifdef debug
-    Serial.println("End of not configured");
-#endif
     }
   } // end of getPrefs function
 
@@ -565,7 +531,7 @@ void doSwitch(int status)
     return true;
     // else
     // return false;
-  }
+  } // end of ValidateIP function
 
   // This function is an event handler for the wed server and it handles page requests for pages that do not exist
   void handle_NotFound(AsyncWebServerRequest *request)
@@ -611,8 +577,9 @@ void doSwitch(int status)
       return WIFI;
     }
     return String();
-  }
+  } // end of processor function
 
+  // This function tells the web page what to display depending on the switch state.
   String outputState()
   {
     if (relayStatus)
@@ -624,9 +591,9 @@ void doSwitch(int status)
       return "";
     }
     return "";
-  }
+  } // end of outputState function
 
-  // This function checks if the FactoryReset button is pressed and
+  // This function checks if the Factory Reset button is pressed and
   // if it is pressed for more than 10 seconds it will erase the
   // preferences and reboot the ESP32
   void checkFactoryReset()
@@ -659,4 +626,4 @@ void doSwitch(int status)
     {
       button_press_time = 0;
     }
-  }
+  } // end of checkFactoryReset function
