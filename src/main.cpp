@@ -38,7 +38,7 @@ char MQTTpass[32];    // Password for connecting to the MQTT server
 char PublishTopic[32]; // The MQTT topic that the device will publish to with the status of the relay or other things.
 char SubTopic[32];     // MQTT topic that we will subscribe to for triggering
 bool allSet = false; // used for checking the web page
-int inputError = -1;
+int inputError = -1; // used during processing if input fields on the configuration web page
 unsigned long button_press_time = 0;   // used to debouncing the buttons
 unsigned long button_release_time = 0; // also used for debouncing the buttons
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
