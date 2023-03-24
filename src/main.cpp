@@ -42,6 +42,7 @@ int inputError = -1; // used during processing if input fields on the configurat
 unsigned long button_press_time = 0;   // used to debouncing the buttons
 unsigned long button_release_time = 0; // also used for debouncing the buttons
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
+bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
 
 // The following raw literal is holding the web page that is used when the switch is configured. This web page displays
 // a visual representation of the switch that lets you turn the light on and off. It also updates the on screen switch
@@ -55,7 +56,7 @@ const char index_html[] PROGMEM = R"rawliteral(
     html {font-family: Arial; display: inline-block; text-align: center;}
     h2 {font-size: 1.5rem;}
     p {font-size: 3.0rem;}
-    div#top-right {position: absolute; bottom: -55px; right: 0px}
+    div#bottom-right {position: absolute; bottom: -55px; right: 0px}
     body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
     .switch {position: relative; display: inline-block; width: 120px; height: 68px; transform: rotate(-90deg)} 
     .switch input {display: none}
@@ -83,7 +84,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h2>Boyle smart light switch</h2>
-  <div id=top-right>%SIGNALSTRENGTH%</div>
+  <div id=bottom-right>%SIGNALSTRENGTH%</div>
   %BUTTONPLACEHOLDER%
 <script>function toggleCheckbox(element) {
   var xhr = new XMLHttpRequest();
@@ -139,6 +140,7 @@ void doSwitch(int status);
 String outputState();
 String processor(const String &var);
 void checkFactoryReset();
+void HandleMQTTinfo();
 
 // HTTPSRedirect *client = nullptr;
 
@@ -175,6 +177,8 @@ void loop()
   handleSwitch();
 
   checkFactoryReset();
+
+  HandleMQTTinfo();
 
 } // End of main loop function
 
@@ -225,6 +229,10 @@ void doSwitch(int status)
   {
     relayStatus = !relayStatus;
     doSwitch(relayStatus);
+  }
+  else if (tempChar == "info")
+  {
+    MQTTinfoFlag = true;
   }
   } // end of MQTTcallback function
 
@@ -627,3 +635,20 @@ void doSwitch(int status)
       button_press_time = 0;
     }
   } // end of checkFactoryReset function
+
+  // This function check to see if there was a request to send device info and if so then it
+  // generates a json dataset and publishes it to the topic that was configured in teh settings
+  // also it resets the flag
+  void HandleMQTTinfo()
+  {
+    if (MQTTinfoFlag)
+    {
+      MQTTinfoFlag = false;
+      StaticJsonDocument<200> doc;
+      doc["relayState"] = relayStatus;
+      doc["WiFiStrength"] = WiFi.RSSI();
+      char buffer[256];
+      serializeJson(doc, buffer);
+      client.publish(PublishTopic, buffer);
+    }
+  }
