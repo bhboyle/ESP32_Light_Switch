@@ -641,14 +641,14 @@ void doSwitch(int status)
   // also it resets the flag
   void HandleMQTTinfo()
   {
-    if (MQTTinfoFlag)
+    if (MQTTinfoFlag) // check if the flag is set
     {
-      MQTTinfoFlag = false;
-      StaticJsonDocument<200> doc;
-      doc["relayState"] = relayStatus;
-      doc["WiFiStrength"] = WiFi.RSSI();
-      char buffer[256];
-      serializeJson(doc, buffer);
-      client.publish(PublishTopic, buffer);
+      MQTTinfoFlag = false;                 // if it is reset the flag
+      StaticJsonDocument<200> doc;          // start compiling the json dataset
+      doc["relayState"] = relayStatus;      // add the relay state
+      doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
+      char buffer[256];                     // start the conversion to a Char
+      serializeJson(doc, buffer);           // do the conversion
+      client.publish(PublishTopic, buffer); // send the message
     }
-  }
+  } // end of HandleMQTTinfo function
