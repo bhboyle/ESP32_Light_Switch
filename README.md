@@ -20,7 +20,7 @@ Right now this is the beginning. There is much more work to be done.
 1. Over the Air updates
 2. ~~Web server available at all times to look at status, variables and configuration~~
 3. ~~Light switch works no matter what even before being configured~~
-4. MQTT triggering via node-red
+4. ~~MQTT triggering via node-red~~
 5. ~~Triggering via Wed interface~~
 6. Fits into a standard wall box in North America
 7. ~~Standard Normally open switching and three way switching~~
