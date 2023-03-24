@@ -353,6 +353,8 @@ void doSwitch(int status)
     valuesArray[9].toCharArray(temp2, temp);
     pixels.setBrightness(atoi(temp2));
 
+
+
     checkWIFI();
 
     maintainMQTT();
@@ -641,6 +643,8 @@ void doSwitch(int status)
   // also it resets the flag
   void HandleMQTTinfo()
   {
+
+
     if (MQTTinfoFlag) // check if the flag is set
     {
       MQTTinfoFlag = false;                 // if it is reset the flag
