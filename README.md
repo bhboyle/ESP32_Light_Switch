@@ -12,19 +12,19 @@ Right now this is the beginning. There is much more work to be done.
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
 2. ~~Define the software requirements~~ **Done (at least for now)**
-3. Complete the software for the ESP32-S3
-4. Design the enclosure in Fusion 360
+3. Complete the software for the ESP32-S3 ** This is alsmost done **
+4. Design the enclosure in Fusion 360 **I will not start this until I have the boards in hand and can measure them in the reasl world**
 5. Print and test the enclosure
 
 ## Features to add
 1. Over the Air updates
-2. ~~Web server available at all times to look at status, variables and configuration~~
-3. ~~Light switch works no matter what even before being configured~~
-4. ~~MQTT triggering via node-red~~
-5. ~~Triggering via Wed interface~~
+2. ~~Web server available at all times to look at status, variables and configuration~~ **Tested and working**
+3. ~~Light switch works no matter what even before being configured~~ **Tested and working**
+4. ~~MQTT triggering via node-red~~ **Tested and working** 
+5. ~~Triggering via Wed interface~~ **Tested and working**
 6. Fits into a standard wall box in North America
 7. ~~Standard Normally open switching and three way switching~~
 8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on. **This version of the board does not have this feature. Maybe the next version**
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
-10. Remember power state for power failures using preferences
+10. Remember power state for power failures using preferences **Tested and working**
 
