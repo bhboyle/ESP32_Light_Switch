@@ -28,4 +28,4 @@ Right now this is the beginning. There is much more work to be done.
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
 10. Remember power state for power failures using preferences **Tested and working**
 
-Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to comile the code in the Arduino IDE you sumply need to get the main.cpp file from the SRC folder and put it inot your skect folder. You will also need to gether and install the needed libraries.
+Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to comile the code in the Arduino IDE you sumply need to get the main.cpp file from the SRC folder and put it inot your sketch folder. You will also need to gather and install the needed libraries.
