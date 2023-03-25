@@ -142,8 +142,6 @@ String processor(const String &var);
 void checkFactoryReset();
 void HandleMQTTinfo();
 
-// HTTPSRedirect *client = nullptr;
-
 // Start of setup function
 void setup()
 {
@@ -156,13 +154,12 @@ void setup()
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
   pinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
-  // pinMode(WIFILEDPin, OUTPUT);         // Setup the output pin for the WIFI LED
 
-  pixels.setBrightness(100); // Set BRIGHTNESS
+  pixels.setBrightness(100); // Set BRIGHTNESS of the indicator Neopixel
   pixels.begin();            // INITIALIZE NeoPixel strip object (REQUIRED)
   pixels.clear();            // Set all pixel colors to 'off'
 
-  setColor(255, 0, 0); // Set LED to red
+  setColor(255, 0, 0); // Set LED to red at boot up
 
 } // end of setup function
 
@@ -188,7 +185,7 @@ void loop()
 
 */
 
-// This function check is the switch button is pressed and toggles the light is it has
+// This function checks if the switch button is pressed and toggles the light is it has
 void handleSwitch()
 {
   int temp = digitalRead(LightButton);
@@ -236,7 +233,7 @@ void doSwitch(int status)
   }
   } // end of MQTTcallback function
 
-  // This function will start the WIFI connection or maintain it if it is already connected
+  // This function will start the WIFI connection or maintains it if it is already connected
   void checkWIFI()
   {
 
@@ -549,7 +546,7 @@ void doSwitch(int status)
     request->send(404, "text/plain", "Not found");
   }
 
-  // Replaces placeholder with button section in your web page
+  // Replaces placeholder items in the main HTML with code generated as needed
   String processor(const String &var)
   {
     // Serial.println(var);
@@ -644,10 +641,9 @@ void doSwitch(int status)
   void HandleMQTTinfo()
   {
 
-
     if (MQTTinfoFlag) // check if the flag is set
     {
-      MQTTinfoFlag = false;                 // if it is reset the flag
+      MQTTinfoFlag = false;                 // if it is, reset the flag
       StaticJsonDocument<200> doc;          // start compiling the json dataset
       doc["relayState"] = relayStatus;      // add the relay state
       doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
