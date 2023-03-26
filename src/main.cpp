@@ -7,6 +7,7 @@
 #include <ESPAsyncWebServer.h>
 #include <nvs_flash.h>
 #include <ArduinoJson.h>
+#include <AsyncElegantOTA.h>
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
@@ -88,8 +89,8 @@ const char index_html[] PROGMEM = R"rawliteral(
   %BUTTONPLACEHOLDER%
 <script>function toggleCheckbox(element) {
   var xhr = new XMLHttpRequest();
-  if(element.checked){ xhr.open("GET", "/update?state=1", true); }
-  else { xhr.open("GET", "/update?state=0", true); }
+  if(element.checked){ xhr.open("GET", "/refresh?state=1", true); }
+  else { xhr.open("GET", "/refresh?state=0", true); }
   xhr.send();
 }
 
@@ -145,9 +146,9 @@ void HandleMQTTinfo();
 // Start of setup function
 void setup()
 {
-#ifdef debug
+  // #ifdef debug
   Serial.begin(115200);
-#endif
+  // #endif
 
   getPrefs();
 
@@ -208,9 +209,9 @@ void doSwitch(int status)
   preferences.end();
 } // end of doSwitch function
 
-  // MQTT callback function to handle any trigger events from the MQTT server
-  void MQTTcallBack(String topic, String payload)
-  {
+// MQTT callback function to handle any trigger events from the MQTT server
+void MQTTcallBack(String topic, String payload)
+{
   String tempChar = payload; // grab the payload
   if (tempChar == "0")       // check if the payload is a zero
   {
@@ -231,11 +232,11 @@ void doSwitch(int status)
   {
     MQTTinfoFlag = true;
   }
-  } // end of MQTTcallback function
+} // end of MQTTcallback function
 
-  // This function will start the WIFI connection or maintains it if it is already connected
-  void checkWIFI()
-  {
+// This function will start the WIFI connection or maintains it if it is already connected
+void checkWIFI()
+{
 
   if (!WifiAPStatus)
   {
@@ -273,11 +274,11 @@ void doSwitch(int status)
       setColor(255, 255, 0); // Set LED to Yellow
     }
   }
-  } // end of checkwifi function
+} // end of checkwifi function
 
-  // This function starts the MQTT connection and if it is already connected it will maintain the connection
-  void maintainMQTT()
-  {
+// This function starts the MQTT connection and if it is already connected it will maintain the connection
+void maintainMQTT()
+{
   if (!WifiAPStatus)
   {
     if (client.connected()) // used to maintain the MQTT connection
@@ -302,24 +303,24 @@ void doSwitch(int status)
       }
     }
   }
-  } // end of maintainMQTT function
+} // end of maintainMQTT function
 
-  // This function sets the color of the NEOPixel LED. It must be called with
-  // an R-ed intensity, an G-reen intensity and a B-lue intensity for the Neopixel
-  void setColor(int r, int g, int b)
-  {
-    pixels.setPixelColor(0, pixels.Color(r, g, b));
-    pixels.show();
-  } // end of setColor function
+// This function sets the color of the NEOPixel LED. It must be called with
+// an R-ed intensity, an G-reen intensity and a B-lue intensity for the Neopixel
+void setColor(int r, int g, int b)
+{
+  pixels.setPixelColor(0, pixels.Color(r, g, b));
+  pixels.show();
+} // end of setColor function
 
-  // This function will get the preferences from the ESP32 NV storage and if it has not yet been configured it will
-  // put the ESP32 in AP mode and start up a webpage to get it configured
-  void getPrefs()
+// This function will get the preferences from the ESP32 NV storage and if it has not yet been configured it will
+// put the ESP32 in AP mode and start up a webpage to get it configured
+void getPrefs()
+{
+  preferences.begin("configuration", false);
+  bool configured = preferences.getBool("configured", false);
+  if (configured)
   {
-    preferences.begin("configuration", false);
-    bool configured = preferences.getBool("configured", false);
-    if (configured)
-    {
 
     for (int i = 0; i < totalVariables; i++)
     {
@@ -350,23 +351,23 @@ void doSwitch(int status)
     valuesArray[9].toCharArray(temp2, temp);
     pixels.setBrightness(atoi(temp2));
 
-
-
     checkWIFI();
 
     maintainMQTT();
+
+    AsyncElegantOTA.begin(&server_AP); // Start AsyncElegantOTA
 
     // Route for root / web page   ****Start web server if the switch is configured
     server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                  { request->send_P(200, "text/html", index_html, processor); });
 
-    // Send a GET request to <ESP_IP>/update?state=<inputMessage>
+    // Send a GET request to <ESP_IP>/refresh?state=<inputMessage>
     // used to change the switch state via http
-    server_AP.on("/update", HTTP_GET, [](AsyncWebServerRequest *request)
+    server_AP.on("/refresh", HTTP_GET, [](AsyncWebServerRequest *request)
                  {
       String inputMessage;
       String inputParam;
-      // GET input1 value on <ESP_IP>/update?state=<inputMessage>
+      // GET input1 value on <ESP_IP>/refresh?state=<inputMessage>
       if (request->hasParam(PARAM_INPUT_1)) {
         inputMessage = request->getParam(PARAM_INPUT_1)->value();
         inputParam = PARAM_INPUT_1;
@@ -396,9 +397,9 @@ void doSwitch(int status)
                     request->send(200, "text/plain", buffer); });
     // Start server
     server_AP.begin();
-    }
-    else // if the board is not configured then do the following
-    {
+  }
+  else // if the board is not configured then do the following
+  {
     setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
     WiFi.softAP(ssidAP, passwordAP);
     WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
@@ -457,9 +458,8 @@ void doSwitch(int status)
     } });
     server_AP.onNotFound(handle_NotFound);
     server_AP.begin();
-    // handleSwitch();
-    }
-  } // end of getPrefs function
+  }
+} // end of getPrefs function
 
   // This function generates the HTML for thw Access point mode at initial startup
   void createAP_IndexHtml()
