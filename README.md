@@ -28,7 +28,7 @@ Right now this is the beginning. There is much more work to be done.
 
 I have found the ACS712 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.
 
-So after some more research I have discovered that the ACS712 may well be perfect for this project. it has a maximum current handling capacity of 55 amps, way more than I would ever need. which I like in terms of having lots of overhead for a safety margin. Also it can be used to determine how much power is being used over time. This is huge.
+So after some more research I have discovered that the ACS712 may well be perfect for this project. It has a maximum current handling capacity of 55 amps, way more than I would ever need. Which I like in terms of having lots of overhead for a safety margin. Also it can be used, through software, to determine how much power is being used over time. This is huge.
 
 I have updated the schematics to include the new device but the original boards have not yet arrived. 
 
