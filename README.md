@@ -12,9 +12,9 @@ Right now this is the beginning. There is much more work to be done.
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
 2. ~~Define the software requirements~~ **Done (at least for now)**
-3. Complete the software for the ESP32-S3 ** This is alsmost done **
-4. Design the enclosure in Fusion 360 **I will not start this until I have the boards in hand and can measure them in the reasl world**
-5. Print and test the enclosure
+3. Complete the software for the ESP32-S3 ** This is almost done **
+4. Design the enclosure in Fusion 360 **I will not start this until I have the boards in hand and can measure them in the real world**
+5. Print and test the enclosure. I have ordered some PETG to print the initial housings from. I hope it has the characteristics I am looking for.
 
 ## Features to add
 1. ~~Over the Air updates~~ ** added using the [ElegantOTA lib](https://github.com/ayushsharma82/ElegantOTA). **Tested and working**
@@ -28,10 +28,12 @@ Right now this is the beginning. There is much more work to be done.
 
 I have found the ACS712 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.
 
-So after some more research I have discovered that the ACS712 may well be perfect for this project. it has a maximum current handling capacity of 55 amps, way more than I would ever need. which I like in terms of having lots of overhead for a safety margin. Also it can be used to determine how much power is being used over time. This is **huge.** 
+So after some more research I have discovered that the ACS712 may well be perfect for this project. it has a maximum current handling capacity of 55 amps, way more than I would ever need. which I like in terms of having lots of overhead for a safety margin. Also it can be used to determine how much power is being used over time. This is huge.
+
+I have updated the schematics to include the new device but the original boards have not yet arrived. 
 
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
 10. Remember power state for power failures using preferences **Tested and working**
 
 ### Build environment
-Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to comile the code in the Arduino IDE you sumply need to get the main.cpp file from the SRC folder and put it in to your sketch folder. You will also need to gather and install the needed libraries.
+Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to compile the code in the Arduino IDE you simply need to get the main.cpp file from the SRC folder and put it in to your sketch folder. You will also need to gather and install the needed libraries.
