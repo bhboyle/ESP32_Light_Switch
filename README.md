@@ -12,9 +12,9 @@ Right now this is the beginning. There is much more work to be done.
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
 2. ~~Define the software requirements~~ **Done (at least for now)**
-3. Complete the software for the ESP32-S3 ** This is almost done **
+3. Complete the software for the ESP32-S3 **This is almost done**
 4. Design the enclosure in Fusion 360 **I will not start this until I have the boards in hand and can measure them in the real world**
-5. Print and test the enclosure. I have ordered some PETG to print the initial housings from. I hope it has the characteristics I am looking for.
+5. Print and test the enclosure. **I have ordered some PETG to print the initial housings from. I hope it has the characteristics I am looking for.**
 
 ## Features to add
 1. ~~Over the Air updates~~ ** added using the [ElegantOTA lib](https://github.com/ayushsharma82/ElegantOTA). **Tested and working**
@@ -32,7 +32,7 @@ So after some more research I have discovered that the ACS712 may well be perfec
 
 I have updated the schematics to include the new device but the original boards have not yet arrived. 
 
-9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
+9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active **Done**
 10. Remember power state for power failures using preferences **Tested and working**
 
 ### Build environment
