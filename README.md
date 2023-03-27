@@ -24,15 +24,12 @@ Right now this is the beginning. There is much more work to be done.
 5. ~~Triggering via Wed interface~~ **Tested and working**
 6. Fits into a standard wall box in North America
 7. ~~Standard Normally open switching and three way switching~~
-<<<<<<< HEAD
-8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on. 
-**I have found the ACS71240KEXBLT-010B3-115 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.** 
-=======
 8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on.
 
-**I have found the ACS71240 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.** 
+**I have found the ACS712 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.** 
 
->>>>>>> 3838a96203b8028ec0e872aafc5deea4ecab9914
+So after some more research I have discovered that the ACS712 may well be perfect for this project. it has a maximum current handling capacity of 55 amps, way more than I would ever need. which I like in terms of having lots of overhead for a safety margin. Also it can be used to determine how much power is being used over time. This is **huge.** 
+
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active
 10. Remember power state for power failures using preferences **Tested and working**
 
