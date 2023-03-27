@@ -32,7 +32,7 @@ So after some more research I have discovered that the ACS712 may well be perfec
 
 I have updated the schematics to include the new device but the original boards have not yet arrived. 
 
-9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active **Done**
+9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active. **Done**
 10. Remember power state for power failures using preferences **Tested and working**
 
 ### Build environment
