@@ -10,9 +10,14 @@
 #include <AsyncElegantOTA.h>
 #include <filters.h>
 #include "HTML.h"
+#include <time.h>
+#include "esp_sntp.h"
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
+#define ACS_Pin 10 // Sensor data pin on A0 analog input
+#define MY_NTP_SERVER "pool.ntp.org"
+#define MY_TZ "EST5EDT,M3.2.0,M11.1.0"
 // #define debug
 
 // variables
@@ -46,6 +51,19 @@ unsigned long button_press_time = 0;   // used to debouncing the buttons
 unsigned long button_release_time = 0; // also used for debouncing the buttons
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
 bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
+float ACS_Value;                       // This is holding the analog reads of the current sensor
+float testFrequency = 60;              // how often to check the current sensor  (Hz)
+float windowLength = 40.0 / testFrequency; // how long to check the current sensor
+float intercept = 0;                       // calibration value for current sensor RMS value generation
+float slope = 0.0752;                      // calibration value for current sensor RMS value generation
+float Amps_TRMS;                           // estimated actual current in amps
+unsigned long currentReadInterval = 1000;  // how often to read the current sensor
+unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
+unsigned long previousMillisTimeCheck = 0; // Used to track the last time we update the time variables
+int lightButtonState = 0;
+time_t now;                      // this is the epoch
+tm tm;                           // the structure tm holds time information in a more convenient way
+unsigned long lastTimeCheck = 0; // The last time we updated the time variables
 
 // Object constructors
 WiFiClient wifiClient; // create the wifi object
@@ -53,6 +71,7 @@ MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
 Preferences preferences;
 AsyncWebServer server_AP(80);
+RunningStatistics inputStats;
 
 // function declarations
 
@@ -69,25 +88,35 @@ String outputState();
 String processor(const String &var);
 void checkFactoryReset();
 void HandleMQTTinfo();
+void checkCurrentSensor();
+void updateTimeStamp();
 
 // Start of setup function
 void setup()
 {
-  // #ifdef debug
+#ifdef debug
   Serial.begin(115200);
-  // #endif
+#endif
 
   getPrefs();
 
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
   pinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
+  pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
 
   pixels.setBrightness(100); // Set BRIGHTNESS of the indicator Neopixel
   pixels.begin();            // INITIALIZE NeoPixel strip object (REQUIRED)
   pixels.clear();            // Set all pixel colors to 'off'
 
   setColor(255, 0, 0); // Set LED to red at boot up
+
+  inputStats.setWindowSecs(windowLength); // Set the window length for the current sensor readings
+
+  configTime(0, 0, MY_NTP_SERVER); // 0, 0 because we will use TZ in the next line
+  setenv("TZ", MY_TZ, 1);          // Set environment variable with your time zone
+  tzset();
+  sntp_set_sync_interval(12 * 60 * 60 * 1000UL); // set the NTP server poll interval to every 12 hours
 
 } // end of setup function
 
@@ -105,6 +134,10 @@ void loop()
 
   HandleMQTTinfo();
 
+  checkCurrentSensor();
+
+  updateTimeStamp();
+
 } // End of main loop function
 
 /*
@@ -117,11 +150,22 @@ void loop()
 void handleSwitch()
 {
   int temp = digitalRead(LightButton);
+
   if (temp == 0)
   {
-    relayStatus = !relayStatus;
-    doSwitch(relayStatus);
+
+    if (lightButtonState == 0)
+    {
+      relayStatus = !relayStatus;
+      doSwitch(relayStatus);
+      lightButtonState = 1;
+    }
   }
+  else
+  {
+    lightButtonState = 0;
+  }
+
 } // end of handleSwitch function
 
 // This function changes the relay output pin to the new state, publishes the new state
@@ -165,7 +209,7 @@ void MQTTcallBack(String topic, String payload)
 void checkWIFI()
 {
 
-  if (!WifiAPStatus)
+  if (WifiAPStatus == 0)
   {
     if (WiFi.status() != WL_CONNECTED)
     {
@@ -201,12 +245,14 @@ void checkWIFI()
       setColor(255, 255, 0); // Set LED to Yellow
     }
   }
+
 } // end of checkwifi function
 
 // This function starts the MQTT connection and if it is already connected it will maintain the connection
 void maintainMQTT()
 {
-  if (!WifiAPStatus)
+
+  if (WifiAPStatus == 0)
   {
     if (client.connected()) // used to maintain the MQTT connection
     {
@@ -230,6 +276,7 @@ void maintainMQTT()
       }
     }
   }
+
 } // end of maintainMQTT function
 
 // This function sets the color of the NEOPixel LED. It must be called with
@@ -388,194 +435,255 @@ void getPrefs()
   }
 } // end of getPrefs function
 
-  // This function generates the HTML for thw Access point mode at initial startup
-  void createAP_IndexHtml()
+// This function generates the HTML for thw Access point mode at initial startup
+void createAP_IndexHtml()
+{
+  bool allEntered = true;
+  index_html_AP = "";
+  String _type = "";
+  index_html_AP.concat("<!DOCTYPE HTML>");
+  index_html_AP.concat("<html>");
+  index_html_AP.concat("<head>");
+  index_html_AP.concat("<title>Smart Switch Configuration</title>");
+  index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  index_html_AP.concat("</head>");
+  index_html_AP.concat("<body>");
+  index_html_AP.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
+
+  index_html_AP.concat("<form action=\"/get\">");
+  for (int i = 0; i < totalVariables; i++)
   {
-    bool allEntered = true;
-    index_html_AP = "";
-    String _type = "";
-    index_html_AP.concat("<!DOCTYPE HTML>");
-    index_html_AP.concat("<html>");
-    index_html_AP.concat("<head>");
-    index_html_AP.concat("<title>Smart Switch Configuration</title>");
-    index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-    index_html_AP.concat("</head>");
-    index_html_AP.concat("<body>");
-    index_html_AP.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
 
-    index_html_AP.concat("<form action=\"/get\">");
-    for (int i = 0; i < totalVariables; i++)
+    index_html_AP.concat("<table>");
+    index_html_AP.concat("<tr height='15px'>");
+    index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
+    if (i == 1 || i == 5)
     {
-
-        index_html_AP.concat("<table>");
-        index_html_AP.concat("<tr height='15px'>");
-        index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">" + variablesArray[i] + ": </label>");
-        if (i == 1 || i == 5)
-        {
       _type = "password";
-        }
-        else
-        {
-          _type = "text";
-        }
-        if (inputError == i)
-        {
-          index_html_AP.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
-          inputError = -1;
-        }
-        else
-        {
-          index_html_AP.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
-        }
-        // index_html.concat("<input type=\"submit\" value=\"Submit\">");
-        index_html_AP.concat("<br>");
-        if (valuesArray[i] == "")
-        {
-          allEntered = false;
-        }
-        index_html_AP.concat("</tr>");
-        index_html_AP.concat("</table>");
-    }
-
-    if (allEntered)
-    {
-      preferences.putBool("configured", true);
-      allSet = true;
-      index_html_AP.concat("<H1>All fields are stored successfully. Please wait about 10 Seconds and then the device will be restarted.</H1><H1>If you need to change the settings you should reset the device.</H1>");
     }
     else
     {
-      preferences.putBool("configured", false);
-      allSet = false;
-      index_html_AP.concat("<input type=\"submit\" value=\"Submit\">");
+      _type = "text";
     }
-
-    index_html_AP.concat("</form>");
-    index_html_AP.concat("</body>");
-    index_html_AP.concat("</html>");
-  } // end of createIndexHtml function
-
-  // This function makes sure that the IP addresses that are entered in the config page are valid IP addresses
-  bool ValidateIP(String IP)
-  {
-    // ********* This needs to be fixed. It was crashing the ESP32 when a configuration was sent.*********
-    // char *temp = (char *)IP.c_str();
-    // std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0- 9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
-    // if (std::regex_match(temp, ipv4))
-    return true;
-    // else
-    // return false;
-  } // end of ValidateIP function
-
-  // This function is an event handler for the wed server and it handles page requests for pages that do not exist
-  void handle_NotFound(AsyncWebServerRequest *request)
-  {
-    request->send(404, "text/plain", "Not found");
+    if (inputError == i)
+    {
+      index_html_AP.concat("<input style=\"background-color : red;\" type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
+      inputError = -1;
+    }
+    else
+    {
+      index_html_AP.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
+    }
+    // index_html.concat("<input type=\"submit\" value=\"Submit\">");
+    index_html_AP.concat("<br>");
+    if (valuesArray[i] == "")
+    {
+      allEntered = false;
+    }
+    index_html_AP.concat("</tr>");
+    index_html_AP.concat("</table>");
   }
 
-  // Replaces placeholder items in the main HTML with code generated as needed
-  String processor(const String &var)
+  if (allEntered)
   {
-    // Serial.println(var);
-    if (var == "BUTTONPLACEHOLDER")
-    {
-      String buttons = "";
-      String outputStateValue = outputState();
-      buttons += "<h4>The light is <span id=\"outputState\"></span></h4><br><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
-      return buttons;
-    }
-    if (var == "SIGNALSTRENGTH")
-    {
-      String WIFI = "";
-      int rssi = WiFi.RSSI();
-      int strength;
-      if (rssi <= -100)
-      {
-          strength = 0;
-      }
-      else if (rssi >= -50)
-      {
-          strength = 100;
-      }
-      else
-      {
-          strength = map((2 * (rssi + 100)), 0, 100, 0, 4);
-      }
-
-      WIFI.concat(String(rssi) + "<div class = 'waveStrength-" + String(strength) + "'>"); //    + String(strength) + "'>");
-      WIFI.concat("<div class = 'wv4 wave' style = ''>");
-      WIFI.concat("<div class = 'wv3 wave' style = ''>");
-      WIFI.concat("<div class = 'wv2 wave' style = ''>");
-      WIFI.concat("<div class = 'wv1 wave'>");
-      WIFI.concat("</div></div></div></div></div> ");
-      return WIFI;
-    }
-    return String();
-  } // end of processor function
-
-  // This function tells the web page what to display depending on the switch state.
-  String outputState()
+    preferences.putBool("configured", true);
+    allSet = true;
+    index_html_AP.concat("<H1>All fields are stored successfully. Please wait about 10 Seconds and then the device will be restarted.</H1><H1>If you need to change the settings you should reset the device.</H1>");
+  }
+  else
   {
-    if (relayStatus)
+    preferences.putBool("configured", false);
+    allSet = false;
+    index_html_AP.concat("<input type=\"submit\" value=\"Submit\">");
+  }
+
+  index_html_AP.concat("</form>");
+  index_html_AP.concat("</body>");
+  index_html_AP.concat("</html>");
+} // end of createIndexHtml function
+
+// This function makes sure that the IP addresses that are entered in the config page are valid IP addresses
+bool ValidateIP(String IP)
+{
+  // ********* This needs to be fixed. It was crashing the ESP32 when a configuration was sent.*********
+  // char *temp = (char *)IP.c_str();
+  // std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0- 9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
+  // if (std::regex_match(temp, ipv4))
+  return true;
+  // else
+  // return false;
+} // end of ValidateIP function
+
+// This function is an event handler for the wed server and it handles page requests for pages that do not exist
+void handle_NotFound(AsyncWebServerRequest *request)
+{
+  request->send(404, "text/plain", "Not found");
+}
+
+// Replaces placeholder items in the main HTML with code generated as needed
+String processor(const String &var)
+{
+  // Serial.println(var);
+  if (var == "BUTTONPLACEHOLDER")
+  {
+    String buttons = "";
+    String outputStateValue = outputState();
+    buttons += "<h4>The light is <span id=\"outputState\"></span></h4><br><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
+    return buttons;
+  }
+  if (var == "SIGNALSTRENGTH")
+  {
+    String WIFI = "";
+    int rssi = WiFi.RSSI();
+    int strength;
+    if (rssi <= -100)
     {
-      return "checked";
+      strength = 0;
+    }
+    else if (rssi >= -50)
+    {
+      strength = 100;
     }
     else
     {
-      return "";
+      strength = map((2 * (rssi + 100)), 0, 100, 0, 4);
     }
-    return "";
-  } // end of outputState function
 
-  // This function checks if the Factory Reset button is pressed and
-  // if it is pressed for more than 10 seconds it will erase the
-  // preferences and reboot the ESP32
-  void checkFactoryReset()
+    WIFI.concat(String(rssi) + "<div class = 'waveStrength-" + String(strength) + "'>"); //    + String(strength) + "'>");
+    WIFI.concat("<div class = 'wv4 wave' style = ''>");
+    WIFI.concat("<div class = 'wv3 wave' style = ''>");
+    WIFI.concat("<div class = 'wv2 wave' style = ''>");
+    WIFI.concat("<div class = 'wv1 wave'>");
+    WIFI.concat("</div></div></div></div></div> ");
+    return WIFI;
+  }
+  return String();
+} // end of processor function
+
+// This function tells the web page what to display depending on the switch state.
+String outputState()
+{
+  if (relayStatus)
   {
-    if (digitalRead(FactoryReset) == LOW)
+    return "checked";
+  }
+  else
+  {
+    return "";
+  }
+  return "";
+} // end of outputState function
+
+// This function checks if the Factory Reset button is pressed and
+// if it is pressed for more than 10 seconds it will erase the
+// preferences and reboot the ESP32
+void checkFactoryReset()
+{
+
+  if (digitalRead(FactoryReset) == LOW)
+  {
+
+    if (button_press_time == 0)
     {
-      if (button_press_time == 0)
+      button_press_time = millis();
+      Serial.println("button pressed.");
+    }
+    if (millis() - button_press_time > 10000)
+    {
+      for (int i = 0; i < 10; i++)
       {
-          button_press_time = millis();
-          Serial.println("button pressed.");
-      }
-      if (millis() - button_press_time > 10000)
-      {
-          for (int i = 0; i < 10; i++)
-          {
         setColor(255, 0, 0);
         delay(250);
         setColor(0, 0, 0);
         delay(250);
-          }
-          button_press_time = 0;
-          nvs_flash_erase();
-          nvs_flash_init();
-          ESP.restart();
       }
-    }
-
-    // make sure that if the button is not pressed the button_press_time variable is reset
-    if (digitalRead(FactoryReset))
-    {
       button_press_time = 0;
+      nvs_flash_erase();
+      nvs_flash_init();
+      ESP.restart();
     }
-  } // end of checkFactoryReset function
+  }
 
-  // This function check to see if there was a request to send device info and if so then it
-  // generates a json dataset and publishes it to the topic that was configured in teh settings
-  // also it resets the flag
-  void HandleMQTTinfo()
+  // make sure that if the button is not pressed the button_press_time variable is reset
+  if (digitalRead(FactoryReset))
   {
+    button_press_time = 0;
+  }
 
-    if (MQTTinfoFlag) // check if the flag is set
-    {
-      MQTTinfoFlag = false;                 // if it is, reset the flag
-      StaticJsonDocument<200> doc;          // start compiling the json dataset
-      doc["relayState"] = relayStatus;      // add the relay state
-      doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
-      char buffer[256];                     // start the conversion to a Char
-      serializeJson(doc, buffer);           // do the conversion
-      client.publish(PublishTopic, buffer); // send the message
-    }
-  } // end of HandleMQTTinfo function
+} // end of checkFactoryReset function
+
+// This function check to see if there was a request to send device info and if so then it
+// generates a json dataset and publishes it to the topic that was configured in teh settings
+// also it resets the flag
+void HandleMQTTinfo()
+{
+
+  if (MQTTinfoFlag) // check if the flag is set
+  {
+    MQTTinfoFlag = false;                 // if it is, reset the flag
+    StaticJsonDocument<200> doc;          // start compiling the json dataset
+    doc["relayState"] = relayStatus;      // add the relay state
+    doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
+    char buffer[256];                     // start the conversion to a Char
+    serializeJson(doc, buffer);           // do the conversion
+    client.publish(PublishTopic, buffer); // send the message
+  }
+
+} // end of HandleMQTTinfo function
+
+void checkCurrentSensor()
+{
+  Serial.println("Start of checkCurentSensor");
+  unsigned long currentTime = millis();
+
+  ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
+  inputStats.input(ACS_Value);     // log to Stats function
+
+  if ((currentTime - previousMillisSensor) > currentReadInterval)
+  {
+    previousMillisSensor = millis(); // update time
+
+    Amps_TRMS = intercept + slope * inputStats.sigma();
+
+    /*
+
+          do something more here with the data
+
+    */
+  }
+  Serial.println("End of checkCurentSensor");
+
+} // end of checkCurrenSensor function
+
+void updateTimeStamp()
+{
+
+  if ((millis() - lastTimeCheck) > currentReadInterval)
+  {
+    time(&now);             // read the current time
+    localtime_r(&now, &tm); // update the structure tm with the current time
+  }
+  /*
+    Serial.print("year:");
+    Serial.print(tm.tm_year + 1900);    // years since 1900
+    Serial.print("\tmonth:");
+    Serial.print(tm.tm_mon + 1);        // January = 0 (!)
+    Serial.print("\tday:");
+    Serial.print(tm.tm_mday);           // day of month
+    Serial.print("\thour:");
+    Serial.print(tm.tm_hour);           // hours since midnight 0-23
+    Serial.print("\tmin:");
+    Serial.print(tm.tm_min);            // minutes after the hour 0-59
+    Serial.print("\tsec:");
+    Serial.print(tm.tm_sec);            // seconds after the minute 0-61*
+    Serial.print("\twday");
+    Serial.print(tm.tm_wday);           // days since Sunday 0-6
+    if (tm.tm_isdst == 1)               // Daylight Saving Time flag
+      Serial.print("\tDST");
+    else
+      Serial.print("\tstandard");
+    Serial.println();
+
+  */
+
+} // end of updateTimeStamp Function
