@@ -361,8 +361,9 @@ void getPrefs()
     server_AP.on("/state", HTTP_GET, [](AsyncWebServerRequest *request)
                  { request->send(200, "text/plain", String(relayStatus).c_str()); });
 
-    // Send a GET request to <ESP_IP>/state
+    // Send a GET request to <ESP_IP>/info
     // used to get the status of the switch state via HTTP
+    // it will generate a JSON page wit the current status
     server_AP.on("/info", HTTP_GET, [](AsyncWebServerRequest *request)
                  { 
                     String CurrentTime = String(tm.tm_hour) + ":" + String(tm.tm_min)  + ":" + String(tm.tm_sec);
@@ -378,8 +379,8 @@ void getPrefs()
     // Start server
     server_AP.begin();
   }
-  else // if the board is not configured then do the following
-  {
+  else                   // if the board is not configured then do the following
+  {                      // start the WIFI in AP mode and turn on the web server and display the config page
     setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
     WiFi.softAP(ssidAP, passwordAP);
     WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
@@ -671,27 +672,14 @@ void updateTimeStamp()
     localtime_r(&now, &tm); // update the structure tm with the current time
   }
   /*
-    Serial.print("year:");
     Serial.print(tm.tm_year + 1900);    // years since 1900
-    Serial.print("\tmonth:");
     Serial.print(tm.tm_mon + 1);        // January = 0 (!)
-    Serial.print("\tday:");
     Serial.print(tm.tm_mday);           // day of month
-    Serial.print("\thour:");
     Serial.print(tm.tm_hour);           // hours since midnight 0-23
-    Serial.print("\tmin:");
     Serial.print(tm.tm_min);            // minutes after the hour 0-59
-    Serial.print("\tsec:");
     Serial.print(tm.tm_sec);            // seconds after the minute 0-61*
-    Serial.print("\twday");
     Serial.print(tm.tm_wday);           // days since Sunday 0-6
     if (tm.tm_isdst == 1)               // Daylight Saving Time flag
-      Serial.print("\tDST");
-    else
-      Serial.print("\tstandard");
-    Serial.println();
- string time = tm.tm_hour +":" + tm.tm_min + ":" + .tm.tm_sec;
- string date = (tm.tm_mon +1) + " " + tm.tm_day + " " + (tm.tm_year +1900);
   */
 
 } // end of updateTimeStamp Function
