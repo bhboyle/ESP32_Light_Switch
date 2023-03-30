@@ -25,6 +25,7 @@ Right now this is the beginning. There is much more work to be done.
 4. ~~MQTT triggering via node-red~~ **Tested and working** 
 5. ~~Triggering via Wed interface~~ **Tested and working**
 6. Fits into a standard wall box in North America
+    * This looks like it should not be a problem because this first version is smaller than a TP-Link smart switch I have been using as a size reference. 
 7. ~~Standard Normally open switching and three way switching~~
 8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on.  
     * I have found the ACS712 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.  
