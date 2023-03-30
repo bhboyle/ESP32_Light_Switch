@@ -26,11 +26,10 @@ Right now this is the beginning. There is much more work to be done.
 7. ~~Standard Normally open switching and three way switching~~
 8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on.
 
-..*I have found the ACS712 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.
+..* I have found the ACS712 this is a very interesting device that uses the Hall effect to measure the AC current without directly connecting its output to the AC voltage. There are quite a few variants of this device but this one runs on 3.3 volts so it is compatible with the ESP32 and it measures up to 10 amps so it is right in the ball park with the capacity of the relay I am using. I am updating the schematic for the next version that I will eventually order.
 
-..*So after some more research I have discovered that the ACS712 may well be perfect for this project. It has a maximum current handling capacity of 55 amps, way more than I would ever need. Which I like in terms of having lots of overhead for a safety margin. Also it can be used, through software, to determine how much power is being used over time. This is huge.
+..* So after some more research I have discovered that the ACS712 may well be perfect for this project. It has a maximum current handling capacity of 55 amps, way more than I would ever need. Which I like in terms of having lots of overhead for a safety margin. Also it can be used, through software, to determine how much power is being used over time. This is huge.
 
-..*I have updated the schematics to include the new device. The original boards have arrived and I missed something is the design. I forgot to connect the USB bus power to the 5 Volt regulator net. The result is that the device has to be powered by AC to program it. I have fixed this for the next version. 
 
 9. LED colors. Red - Boot up, Yellow - WIFI connected, Green - WIFI and MQTT connected, Blue = AP is active. **Done**
 10. Remember power state for power failures using preferences **Tested and working**
