@@ -11,9 +11,10 @@ Right now this is the beginning. There is much more work to be done.
 
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
+    * First version of the board have arrived and I found my first mistake. I did not connect the USB 5 volt source to the output of the on board power supply. This means that the on board 3.3 volt regulator is not powered when connected to the USB and so the board is not programmable when powered ony by the USB port. It has to be powered by AC also for it to be programmable. 
 2. ~~Define the software requirements~~ **Done (at least for now)**
 3. Complete the software for the ESP32-S3 **This is almost done**
-4. Design the enclosure in Fusion 360 **Started. The lower housing is basically completed. I stll need to model the plate and the button**
+4. Design the enclosure in Fusion 360 **Started. The lower housing is basically completed. I still need to model the plate and the button**
 5. Print and test the enclosure. **I have ordered some PETG to print the initial housings from. I hope it has the characteristics I am looking for.**
 
 ## Features to add
