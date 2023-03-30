@@ -94,22 +94,21 @@ void updateTimeStamp();
 // Start of setup function
 void setup()
 {
-#ifdef debug
-  Serial.begin(115200);
-#endif
-
-  getPrefs();
+  pixels.setBrightness(100); // Set BRIGHTNESS of the indicator Neopixel
+  pixels.begin();            // INITIALIZE NeoPixel strip object (REQUIRED)
+  pixels.clear();            // Set all pixel colors to 'off'
+  setColor(255, 0, 0);       // Set LED to red at boot up
 
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
   pinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
   pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
 
-  pixels.setBrightness(100); // Set BRIGHTNESS of the indicator Neopixel
-  pixels.begin();            // INITIALIZE NeoPixel strip object (REQUIRED)
-  pixels.clear();            // Set all pixel colors to 'off'
+#ifdef debug
+  Serial.begin(115200);
+#endif
 
-  setColor(255, 0, 0); // Set LED to red at boot up
+  getPrefs();
 
   inputStats.setWindowSecs(windowLength); // Set the window length for the current sensor readings
 
@@ -288,7 +287,10 @@ void setColor(int r, int g, int b)
 } // end of setColor function
 
 // This function will get the preferences from the ESP32 NV storage and if it has not yet been configured it will
-// put the ESP32 in AP mode and start up a webpage to get it configured
+// put the ESP32 in AP mode and start up a webpage to get it configured.
+// It also has all the handlers for the web server in here like the /info handler that
+// will generate a jason page that outputs the current status of the switch.
+// There is a fair bit happening here.
 void getPrefs()
 {
   preferences.begin("configuration", false);
@@ -363,9 +365,13 @@ void getPrefs()
     // used to get the status of the switch state via HTTP
     server_AP.on("/info", HTTP_GET, [](AsyncWebServerRequest *request)
                  { 
+                    String CurrentTime = String(tm.tm_hour) + ":" + String(tm.tm_min)  + ":" + String(tm.tm_sec);
+                    String CurrentDate = String(tm.tm_mon +1) + " " + String(tm.tm_mday) + " " + String(tm.tm_year +1900);
                     StaticJsonDocument<200> doc;
                     doc["relayState"] = relayStatus;
                     doc["WiFiStrength"] = WiFi.RSSI();
+                    doc["date"] = CurrentDate;
+                    doc["time"] = CurrentTime;
                     char buffer[256];
                     serializeJson(doc, buffer);
                     request->send(200, "text/plain", buffer); });
@@ -660,6 +666,7 @@ void updateTimeStamp()
 
   if ((millis() - lastTimeCheck) > currentReadInterval)
   {
+    lastTimeCheck = millis();
     time(&now);             // read the current time
     localtime_r(&now, &tm); // update the structure tm with the current time
   }
@@ -683,7 +690,9 @@ void updateTimeStamp()
     else
       Serial.print("\tstandard");
     Serial.println();
-
+ string time = tm.tm_hour +":" + tm.tm_min + ":" + .tm.tm_sec;
+ string date = (tm.tm_mon +1) + " " + tm.tm_day + " " + (tm.tm_year +1900);
   */
 
 } // end of updateTimeStamp Function
+
