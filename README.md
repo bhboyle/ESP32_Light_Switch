@@ -11,7 +11,8 @@ Right now this is the beginning. There is much more work to be done.
 
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
-    * First version of the board have arrived and I found my first mistake. I did not connect the USB 5 volt source to the output of the on board power supply. This means that the on board 3.3 volt regulator is not powered when connected to the USB and so the board is not programmable when powered ony by the USB port. It has to be powered by AC also for it to be programmable. This has been updated in the schematic for the next version. I have not moved the next version of the Schematic into this repo yet as I want to order the new boards and test them first.
+    * First version of the board have arrived and I found my first mistake. I did not connect the USB 5 volt source to the output of the on board power supply. This means that the on board 3.3 volt regulator is not powered when connected to the USB and so the board is not programmable when powered ony by the USB port. It has to be powered by AC also for it to be programmable. 
+    * This has been updated in the schematic for the next version. I have not moved the next version of the Schematic into this repo yet as I want to order the new boards and test them first.
 2. ~~Define the software requirements~~ **Done (at least for now)**
 3. Complete the software for the ESP32-S3 **This is almost done**
 4. Design the enclosure in Fusion 360 **Started. The lower housing is basically completed. I still need to model the plate and the button**
