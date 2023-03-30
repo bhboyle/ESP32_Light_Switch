@@ -13,7 +13,7 @@ Right now this is the beginning. There is much more work to be done.
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
 2. ~~Define the software requirements~~ **Done (at least for now)**
 3. Complete the software for the ESP32-S3 **This is almost done**
-4. Design the enclosure in Fusion 360 **I will not start this until I have the boards in hand and can measure them in the real world**
+4. Design the enclosure in Fusion 360 **Started. The lower housing is basically completed. I stll need to model the plate and the button**
 5. Print and test the enclosure. **I have ordered some PETG to print the initial housings from. I hope it has the characteristics I am looking for.**
 
 ## Features to add
