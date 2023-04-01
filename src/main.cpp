@@ -640,10 +640,10 @@ void HandleMQTTinfo()
 
 } // end of HandleMQTTinfo function
 
-// The function reads the current sensor
+// The function reads the current sensor and reports the data over time
 void checkCurrentSensor()
 {
-  Serial.println("Start of checkCurentSensor");
+
   unsigned long currentTime = millis();
 
   ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
