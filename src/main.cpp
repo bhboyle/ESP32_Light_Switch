@@ -25,7 +25,7 @@
 int LightButton = 15;  // The input pin of the button that triggers the relay
 int FactoryReset = 16; // The input pin of the button that will trigger a factory reset
 int RelayPin = 20;     // The output pin that will trigger the relay
-//                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9
+//                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9,...............
 String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
 int totalVariables = 10;
@@ -64,6 +64,7 @@ int lightButtonState = 0;
 time_t now;                      // this is the epoch
 tm tm;                           // the structure tm holds time information in a more convenient way
 unsigned long lastTimeCheck = 0; // The last time we updated the time variables
+bool OnState = 0;                // this is used to tell if there is current flowing through the switch or not. This is used to indicate on or off status
 
 // Object constructors
 WiFiClient wifiClient; // create the wifi object
@@ -89,7 +90,7 @@ String processor(const String &var);
 void checkFactoryReset();
 void HandleMQTTinfo();
 void checkCurrentSensor();
-void updateTimeStamp();
+void updateTime();
 
 // Start of setup function
 void setup()
@@ -135,7 +136,7 @@ void loop()
 
   checkCurrentSensor();
 
-  updateTimeStamp();
+  updateTime();
 
 } // End of main loop function
 
@@ -519,6 +520,7 @@ bool ValidateIP(String IP)
   return true;
   // else
   // return false;
+
 } // end of ValidateIP function
 
 // This function is an event handler for the wed server and it handles page requests for pages that do not exist
@@ -638,6 +640,7 @@ void HandleMQTTinfo()
 
 } // end of HandleMQTTinfo function
 
+// The function reads the current sensor
 void checkCurrentSensor()
 {
   Serial.println("Start of checkCurentSensor");
@@ -651,18 +654,32 @@ void checkCurrentSensor()
     previousMillisSensor = millis(); // update time
 
     Amps_TRMS = intercept + slope * inputStats.sigma();
-
-    /*
-
-          do something more here with the data
-
-    */
   }
-  Serial.println("End of checkCurentSensor");
+  // ******************************************************
+  // the following is only going to work on Gen 2 boards
+  // uncomment this for newer boards and adjust the reporting in the other functions.
+  /*
+  if (Amps_TRMS >  .05) { // if the current is above a basic value then assume the switch is on
+    OnState = true;
+  } else {  // if not then assume the switch is off
+    OnState = false;
+  }
+    // ****************************************************
+  */
+
+  /*
+
+        do something more here with the data for storing it somewhere
+
+  */
+
+ 
 
 } // end of checkCurrenSensor function
 
-void updateTimeStamp()
+// this function makes sure the device always knows the current time
+// and keeps that time in the TM struct
+void updateTime()
 {
 
   if ((millis() - lastTimeCheck) > currentReadInterval)
