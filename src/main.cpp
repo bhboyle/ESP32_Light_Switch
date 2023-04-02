@@ -657,9 +657,10 @@ void checkCurrentSensor()
   }
   // ******************************************************
   // the following is only going to work on Gen 2 boards
-  // uncomment this for newer boards and adjust the reporting in the other functions.
+  // uncomment this for newer boards and adjust the reporting in the other functions
+  // to use this data to determine if the switch is on or off
   /*
-  if (Amps_TRMS >  .05) { // if the current is above a basic value then assume the switch is on
+  if (Amps_TRMS > .02) { // if the current is above a basic value then assume the switch is on
     OnState = true;
   } else {  // if not then assume the switch is off
     OnState = false;
