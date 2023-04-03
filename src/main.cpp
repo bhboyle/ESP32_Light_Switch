@@ -299,6 +299,8 @@ void getPrefs()
   if (configured)
   {
 
+    WifiAPStatus = false;
+
     for (int i = 0; i < totalVariables; i++)
     {
       valuesArray[i] = preferences.getString((variablesArray[i]).c_str(), "");
@@ -325,6 +327,7 @@ void getPrefs()
     valuesArray[8].toCharArray(temp2, temp);
     relayStatus = atoi(temp2);
     doSwitch(relayStatus);
+    temp = valuesArray[9].length() + 1;
     valuesArray[9].toCharArray(temp2, temp);
     pixels.setBrightness(atoi(temp2));
 
@@ -377,6 +380,7 @@ void getPrefs()
                     char buffer[256];
                     serializeJson(doc, buffer);
                     request->send(200, "text/plain", buffer); });
+
     // Start server
     server_AP.begin();
   }
@@ -441,6 +445,7 @@ void getPrefs()
     server_AP.onNotFound(handle_NotFound);
     server_AP.begin();
   }
+
 } // end of getPrefs function
 
 // This function generates the HTML for thw Access point mode at initial startup
@@ -603,7 +608,7 @@ void checkFactoryReset()
       {
         setColor(255, 0, 0);
         delay(250);
-        setColor(0, 0, 0);
+        setColor(0, 0, 255);
         delay(250);
       }
       button_press_time = 0;
@@ -659,26 +664,19 @@ void checkCurrentSensor()
   // the following is only going to work on Gen 2 boards
   // uncomment this for newer boards and adjust the reporting in the other functions
   // to use this data to determine if the switch is on or off
-  /*
-  if (Amps_TRMS > .02) { // if the current is above a basic value then assume the switch is on
-    OnState = true;
-  } else {  // if not then assume the switch is off
-    OnState = false;
-  }
-    // ****************************************************
-  */
 
-  /*
+  // if (Amps_TRMS > .02) { // if the current is above a basic value then assume the switch is on
+  //   OnState = true;
+  // } else {  // if not then assume the switch is off
+  //   OnState = false;
+  //  }
+  //  ****************************************************
 
-        do something more here with the data for storing it somewhere
-
-  */
-
- 
+  // do something more here with the data for storing it somewhere
 
 } // end of checkCurrenSensor function
 
-// this function makes sure the device always knows the current time
+// This function makes sure the device always knows the current time
 // and keeps that time in the TM struct
 void updateTime()
 {
@@ -689,16 +687,15 @@ void updateTime()
     time(&now);             // read the current time
     localtime_r(&now, &tm); // update the structure tm with the current time
   }
-  /*
-    Serial.print(tm.tm_year + 1900);    // years since 1900
-    Serial.print(tm.tm_mon + 1);        // January = 0 (!)
-    Serial.print(tm.tm_mday);           // day of month
-    Serial.print(tm.tm_hour);           // hours since midnight 0-23
-    Serial.print(tm.tm_min);            // minutes after the hour 0-59
-    Serial.print(tm.tm_sec);            // seconds after the minute 0-61*
-    Serial.print(tm.tm_wday);           // days since Sunday 0-6
-    if (tm.tm_isdst == 1)               // Daylight Saving Time flag
-  */
+
+  // Serial.print(tm.tm_year + 1900);    // years since 1900
+  // Serial.print(tm.tm_mon + 1);        // January = 0 (!)
+  // Serial.print(tm.tm_mday);           // day of month
+  // Serial.print(tm.tm_hour);           // hours since midnight 0-23
+  // Serial.print(tm.tm_min);            // minutes after the hour 0-59
+  // Serial.print(tm.tm_sec);            // seconds after the minute 0-61*
+  // Serial.print(tm.tm_wday);           // days since Sunday 0-6
+  // if (tm.tm_isdst == 1)               // Daylight Saving Time flag
 
 } // end of updateTimeStamp Function
 
