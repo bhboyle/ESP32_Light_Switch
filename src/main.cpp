@@ -30,6 +30,7 @@ String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
 int totalVariables = 10;
 String index_html_AP = "";            // String that will hold the web page code if the switch is not configured
+String settingsHTML = "";
 const char *ssidAP = "Boyle-Light";   // Access point SSID if the switch is not configured
 const char *passwordAP = "12345678";  // Access point password if the switch is not configured
 IPAddress local_ipAP(192, 168, 1, 1); // Access point IP, Netmask and gateway settings  if not configured
@@ -49,6 +50,7 @@ bool allSet = false; // used for checking the web page
 int inputError = -1; // used during processing if input fields on the configuration web page
 unsigned long button_press_time = 0;   // used to debouncing the buttons
 unsigned long button_release_time = 0; // also used for debouncing the buttons
+const char *PARAM_INPUT = "value";
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
 bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
 float ACS_Value;                       // This is holding the analog reads of the current sensor
@@ -65,6 +67,7 @@ time_t now;                      // this is the epoch
 tm tm;                           // the structure tm holds time information in a more convenient way
 unsigned long lastTimeCheck = 0; // The last time we updated the time variables
 bool OnState = 0;                // this is used to tell if there is current flowing through the switch or not. This is used to indicate on or off status
+String sliderValue = "0";        // used to update the LED brightness value
 
 // Object constructors
 WiFiClient wifiClient; // create the wifi object
@@ -91,6 +94,7 @@ void checkFactoryReset();
 void HandleMQTTinfo();
 void checkCurrentSensor();
 void updateTime();
+void createSettingHTML();
 
 // Start of setup function
 void setup()
@@ -380,6 +384,32 @@ void getPrefs()
                     char buffer[256];
                     serializeJson(doc, buffer);
                     request->send(200, "text/plain", buffer); });
+
+    createSettingHTML();
+
+    server_AP.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
+                 { request->send_P(200, "text/html", settingsHTML.c_str()); });
+
+    // Send a GET request to <ESP_IP>/slider?value=<inputMessage>
+    server_AP.on("/slider", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      String inputMessage;
+      // GET input1 value on <ESP_IP>/slider?value=<inputMessage>
+      if (request->hasParam(PARAM_INPUT))
+      {
+        inputMessage = request->getParam(PARAM_INPUT)->value();
+        sliderValue = inputMessage;
+        pixels.setBrightness(sliderValue.toInt()); // Set BRIGHTNESS of the indicator Neopixel
+        valuesArray[9] = sliderValue;
+        preferences.begin("configuration", false);
+        preferences.putString(variablesArray[9].c_str(), valuesArray[9]);
+        preferences.end();
+      }
+      else
+      {
+        inputMessage = "No message sent";
+      }
+      request->send(200, "text/plain", "OK"); });
 
     // Start server
     server_AP.begin();
@@ -699,3 +729,30 @@ void updateTime()
 
 } // end of updateTimeStamp Function
 
+void createSettingHTML()
+{
+  settingsHTML = "";
+  settingsHTML.concat("<!DOCTYPE HTML>");
+  settingsHTML.concat("<html>");
+  settingsHTML.concat("<head>");
+  settingsHTML.concat("<title>Smart Switch Configuration</title>");
+  settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  settingsHTML.concat("</head>");
+  settingsHTML.concat("<body>");
+  settingsHTML.concat("<h2> Welcome the the Bolye Smart Switch Settings page. </h2><br>");
+  settingsHTML.concat("<form action=\"/get\">");
+  settingsHTML.concat("Use this slider to set the LED brightness");
+  settingsHTML.concat("<div class='slidecontainer'>");
+  settingsHTML.concat("<input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
+  settingsHTML.concat("</div>");
+  settingsHTML.concat("<script> function updateSliderPWM(element)");
+  settingsHTML.concat("{");
+  settingsHTML.concat(" var sliderValue = document.getElementById('brightnessSlider').value;");
+  settingsHTML.concat("console.log(sliderValue);");
+  settingsHTML.concat("var xhr = new XMLHttpRequest();");
+  settingsHTML.concat("xhr.open('GET', '/slider?value=' + sliderValue, true);");
+  settingsHTML.concat("xhr.send();");
+  settingsHTML.concat("}");
+  settingsHTML.concat("</script>");
+
+} // end of createSettingHTML function

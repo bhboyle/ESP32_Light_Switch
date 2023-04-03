@@ -40,6 +40,8 @@ const char index_html[] PROGMEM = R"rawliteral(
   <h2>Boyle smart light switch</h2>
   <div id=bottom-right>%SIGNALSTRENGTH%</div>
   %BUTTONPLACEHOLDER%
+  <br><br><br>
+  <a href="/settings" >Settings Page</a>
 <script>function toggleCheckbox(element) {
   var xhr = new XMLHttpRequest();
   if(element.checked){ xhr.open("GET", "/refresh?state=1", true); }
