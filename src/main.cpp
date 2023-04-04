@@ -345,6 +345,27 @@ void getPrefs()
     server_AP.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
                  { request->send_P(200, "text/html", index_html, processor); });
 
+    // handle the form data for the settings page
+    server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      bool processedInput = false;
+      preferences.begin("configuration", false);
+      for (int i = 0; i < totalVariables; i++)
+          {
+            if (request->hasParam(variablesArray[i]))
+            {
+                if (i==8){
+                  valuesArray[8] = "0";
+                } else {
+                    valuesArray[i] = request->getParam(variablesArray[i])->value();
+                }
+                preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
+            }
+          }
+        preferences.end();
+        delay(2000);
+        ESP.restart(); }); // end of handling form data for settings page
+
     // Send a GET request to <ESP_IP>/refresh?state=<inputMessage>
     // used to change the switch state via http
     server_AP.on("/refresh", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -468,7 +489,7 @@ void getPrefs()
     }
     if (allSet)
     {
-      preferences.end();
+      
       delay(10000);
       ESP.restart();
     } });
@@ -729,6 +750,8 @@ void updateTime()
 
 } // end of updateTimeStamp Function
 
+// This function generates the HTML page for the settings page for the
+// configured switch.
 void createSettingHTML()
 {
   settingsHTML = "";
@@ -738,13 +761,6 @@ void createSettingHTML()
   settingsHTML.concat("<title>Smart Switch Configuration</title>");
   settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   settingsHTML.concat("</head>");
-  settingsHTML.concat("<body>");
-  settingsHTML.concat("<h2> Welcome the the Bolye Smart Switch Settings page. </h2><br>");
-  settingsHTML.concat("<form action=\"/get\">");
-  settingsHTML.concat("Use this slider to set the LED brightness");
-  settingsHTML.concat("<div class='slidecontainer'>");
-  settingsHTML.concat("<input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
-  settingsHTML.concat("</div>");
   settingsHTML.concat("<script> function updateSliderPWM(element)");
   settingsHTML.concat("{");
   settingsHTML.concat(" var sliderValue = document.getElementById('brightnessSlider').value;");
@@ -754,5 +770,30 @@ void createSettingHTML()
   settingsHTML.concat("xhr.send();");
   settingsHTML.concat("}");
   settingsHTML.concat("</script>");
+  settingsHTML.concat("<body>");
+  settingsHTML.concat("<h2> Welcome the the Bolye Smart Switch Settings page. </h2><br>");
+  settingsHTML.concat("<form action=\"/get\">");
+  settingsHTML.concat("Wifi SSID <input type='text' name=\"" + variablesArray[0] + "\" value=\"" + valuesArray[0] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("Wifi Password <input type='password' name=\"" + variablesArray[1] + "\" value=\"" + valuesArray[1] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("Device Hostname <input type='text' name=\"" + variablesArray[2] + "\" value=\"" + valuesArray[2] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("MQTT Server Host IP <input type='text' name=\"" + variablesArray[3] + "\" value=\"" + valuesArray[3] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("MQTT Username <input type='text' name=\"" + variablesArray[4] + "\" value=\"" + valuesArray[4] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("MQTT Password <input type='password' name=\"" + variablesArray[5] + "\" value=\"" + valuesArray[5] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("Publish Topic <input type='text' name=\"" + variablesArray[6] + "\" value=\"" + valuesArray[6] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("Subscribe Topic <input type='text' name=\"" + variablesArray[7] + "\" value=\"" + valuesArray[7] + "\">");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("LED Brightness <input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
+  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<input type=\"submit\" value=\"Submit\">");
+  settingsHTML.concat("</form>");
+  settingsHTML.concat("</body>");
+  settingsHTML.concat("</html>");
 
 } // end of createSettingHTML function
