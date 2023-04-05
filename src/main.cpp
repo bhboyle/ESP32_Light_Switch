@@ -761,7 +761,8 @@ void createSettingHTML()
   settingsHTML.concat("<title>Smart Switch Configuration</title>");
   settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   settingsHTML.concat("</head>");
-  settingsHTML.concat("<script> function updateSliderPWM(element)");
+  settingsHTML.concat("<script>");
+  settingsHTML.concat("function updateSliderPWM(element)");
   settingsHTML.concat("{");
   settingsHTML.concat(" var sliderValue = document.getElementById('brightnessSlider').value;");
   settingsHTML.concat("console.log(sliderValue);");
@@ -772,7 +773,7 @@ void createSettingHTML()
   settingsHTML.concat("</script>");
   settingsHTML.concat("<body>");
   settingsHTML.concat("<h2> Welcome the the Bolye Smart Switch Settings page. </h2><br>");
-  settingsHTML.concat("<form action=\"/get\">");
+  settingsHTML.concat("<form action=\"/get\" onsubmit='setTimeout(function() { window.location.reload(); }, 7000)'>");
   settingsHTML.concat("Wifi SSID <input type='text' name=\"" + variablesArray[0] + "\" value=\"" + valuesArray[0] + "\">");
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("Wifi Password <input type='password' name=\"" + variablesArray[1] + "\" value=\"" + valuesArray[1] + "\">");
@@ -793,6 +794,7 @@ void createSettingHTML()
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("<input type=\"submit\" value=\"Submit\">");
   settingsHTML.concat("</form>");
+  settingsHTML.concat("Once the form is submitted the page will reload after 7 seconds");
   settingsHTML.concat("</body>");
   settingsHTML.concat("</html>");
 
