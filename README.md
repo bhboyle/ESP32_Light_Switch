@@ -18,7 +18,7 @@ Currently there are several web pages built into the current firmware. In a conf
 
 I think there is still lots of work to be done but I am very happy with hoe this project is moving forward.
 
-![first image](images/First%20picture.jpg width="100" height="300")
+![first image](images/First%20picture.jpg)
 
 ## Todo
 1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have arrived and are currently being tested**
