@@ -9,14 +9,23 @@ The Preferences library is used to store the variables in the NV ram for retriev
 
 Right now this is the beginning. There is much more work to be done.
 
+## First test switch working!
+So the first switch is up and running and working well. The 3D model took a fair bit of time to get right and went through several revisions for each of the peaices to get the fitting just right. this is all on version one of the hardware. I have already updated the boards to allow for the use of a hall effect currenting  monitoring sensor to determine if the circuit is active regardless of relay state. This means that some things are going to have to move in the housing to accomidate the new baords. 
+
+The bad news is that the sensor I want to use is currently experiencing stock issues. I will work that out shortly but I think I am going to proceed with ordering the next version of the boards from JLCPCB.
+
+Currently there are serveral web pages bult into the current firmware. In a configured switch there is a root web page that allows you to see the current switch state as well as change it state. Also there is a link to the settings page that lets you adjust the settings you entered during initial setup. this would be usefull if you had to change the MQTT server settings of even wifi settings. There is also a /info page that displays a JSON page that contains the current staus of the switch and lastly there is a /update page that lets you upload news firmware over the air.
+
+I thnk there is still lots of work to be done but I am very happy with hoe this project is moving forward.
+
 ## Todo
-1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have been ordered**
+1. ~~Finalize the hardware design and order boards and parts for testing.~~ **Boards have arrived and are currently being tested**
     * First version of the board have arrived and I found my first mistake. I did not connect the USB 5 volt source to the output of the on board power supply. This means that the on board 3.3 volt regulator is not powered when connected to the USB and so the board is not programmable when powered ony by the USB port. It has to be powered by AC also for it to be programmable. 
     * This has been updated in the schematic for the next version. I have not moved the next version of the Schematic into this repo yet as I want to order the new boards and test them first.
 2. ~~Define the software requirements~~ **Done (at least for now)**
 3. Complete the software for the ESP32-S3 **This is almost done**
-4. Design the enclosure in Fusion 360 **Started. The lower housing is basically completed. I still need to model the plate and the button**
-5. Print and test the enclosure. **I have ordered some PETG to print the initial housings from. I hope it has the characteristics I am looking for.**
+4. Design the enclosure in Fusion 360 **Done for version one of the board. Version two will need some tweaks for the new board layouts.**
+5. Print and test the enclosure. **Initial testing is underway using PETG and I am happy so far.**
 
 ## Features to add
 1. ~~Over the Air updates~~ ** added using the [ElegantOTA lib](https://github.com/ayushsharma82/ElegantOTA). **Tested and working**
@@ -24,7 +33,7 @@ Right now this is the beginning. There is much more work to be done.
 3. ~~Light switch works no matter what even before being configured~~ **Tested and working**
 4. ~~MQTT triggering via node-red~~ **Tested and working** 
 5. ~~Triggering via Wed interface~~ **Tested and working**
-6. Fits into a standard wall box in North America
+6. Fits into a standard wall box in North America **Tested and working**
     * This looks like it should not be a problem because this first version is smaller than a TP-Link smart switch I have been using as a size reference. 
 7. ~~Standard Normally open switching and three way switching~~
 8. If I can figure it out, I would like the switch to know if the switched circuit is active. Meaning, if the switch is on. This will require a means to measure the current on the switched side. This is only useful in the 3-way mode as it does not necessarily matter what state the relay is in for the circuit to be on.  
