@@ -177,7 +177,7 @@ void handleSwitch()
 void doSwitch(int status)
 {
   digitalWrite(RelayPin, status);
-  client.publish("Light/Status", String(status));
+  client.publish(valuesArray[6], String(status));
   valuesArray[8] = status;
   preferences.begin("configuration", false);
   preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
