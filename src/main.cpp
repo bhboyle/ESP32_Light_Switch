@@ -12,6 +12,7 @@
 #include "HTML.h"
 #include <time.h>
 #include "esp_sntp.h"
+#include <regex>
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
@@ -50,7 +51,7 @@ bool allSet = false; // used for checking the web page
 int inputError = -1; // used during processing if input fields on the configuration web page
 unsigned long button_press_time = 0;   // used to debouncing the buttons
 unsigned long button_release_time = 0; // also used for debouncing the buttons
-const char *PARAM_INPUT = "value";
+const char *PARAM_INPUT = "value";     // used to handle the slider that sets the LED brightness on the settings webpage of configured switches
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
 bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
 float ACS_Value;                       // This is holding the analog reads of the current sensor
@@ -62,7 +63,7 @@ float Amps_TRMS;                           // estimated actual current in amps
 unsigned long currentReadInterval = 1000;  // how often to read the current sensor
 unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
 unsigned long previousMillisTimeCheck = 0; // Used to track the last time we update the time variables
-int lightButtonState = 0;
+int lightButtonState = 0;                  // used for making sure the light button is only pressed once for each press and release
 time_t now;                      // this is the epoch
 tm tm;                           // the structure tm holds time information in a more convenient way
 unsigned long lastTimeCheck = 0; // The last time we updated the time variables
@@ -176,11 +177,11 @@ void handleSwitch()
 // to the MQTT server and stores the current state in NVram
 void doSwitch(int status)
 {
-  digitalWrite(RelayPin, status);
-  client.publish(valuesArray[6], String(status));
-  valuesArray[8] = status;
+  digitalWrite(RelayPin, status);                 // set the relay to the sent status value
+  client.publish(valuesArray[6], String(status)); // send the new switch state to the MQTT server in the Publish topic in the settings
+  valuesArray[8] = status;                        // set the current relay state in the values array variable
   preferences.begin("configuration", false);
-  preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
+  preferences.putString(variablesArray[8].c_str(), valuesArray[8]); // store the relay state into NV ram
   preferences.end();
 } // end of doSwitch function
 
@@ -433,6 +434,7 @@ void getPrefs()
       request->send(200, "text/plain", "OK"); });
 
     // Start server
+    server_AP.onNotFound(handle_NotFound);
     server_AP.begin();
   }
   else                   // if the board is not configured then do the following
@@ -510,10 +512,14 @@ void createAP_IndexHtml()
   index_html_AP.concat("<head>");
   index_html_AP.concat("<title>Smart Switch Configuration</title>");
   index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  index_html_AP.concat("<style>");
+  index_html_AP.concat(".input {border:1; padding:10px; border-radius: 8px}");
+  index_html_AP.concat(".input:focus { outline: none !important; border:1px solid red; box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; }");
+
+  index_html_AP.concat("</style>");
   index_html_AP.concat("</head>");
   index_html_AP.concat("<body>");
   index_html_AP.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
-
   index_html_AP.concat("<form action=\"/get\">");
   for (int i = 0; i < totalVariables; i++)
   {
@@ -569,13 +575,15 @@ void createAP_IndexHtml()
 // This function makes sure that the IP addresses that are entered in the config page are valid IP addresses
 bool ValidateIP(String IP)
 {
-  // ********* This needs to be fixed. It was crashing the ESP32 when a configuration was sent.*********
-  // char *temp = (char *)IP.c_str();
-  // std::regex ipv4("(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\.){3}([0- 9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])");
-  // if (std::regex_match(temp, ipv4))
-  return true;
-  // else
-  // return false;
+  char *temp = (char *)IP.c_str();
+  if (std::regex_match(temp, std::regex("^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$")))
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 
 } // end of ValidateIP function
 
