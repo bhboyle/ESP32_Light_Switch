@@ -53,4 +53,4 @@ I think there is still lots of work to be done but I am very happy with how this
 Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to compile the code in the Arduino IDE you simply need to get the main.cpp file from the SRC folder and put it in to your sketch folder. You will also need to gather and install the needed libraries.
 
 ### DISCLAMER
-Please understand that this project uses mains power and if you do not know what your doing you can seriously harm or even kill youself. In some places you may not even be leagally allowed to install electrical equipment if you are not a licensed electrition. PLEASE be careful and if you are not confident do not do electrical work yourself. ** You have been warned **
+Please understand that this project uses mains power and if you do not know what your doing you can seriously harm or even kill youself. In some places you may not even be leagally allowed to install electrical equipment if you are not a licensed electrition. PLEASE be careful and if you are not confident do not do electrical work yourself. **You have been warned**
