@@ -7,7 +7,7 @@ For safety and simplicity sake, I used the [Mean Well IRM-02-5](https://www.digi
 
 The Preferences library is used to store the variables in the NV ram for retrieval after a power down.
 
-Version one of the project is essentially completed. It is working and I am very happy t=with how the elements have all come togther to create what I feel is a great little DIY IOT light switch.
+Version one of the project is essentially completed. It is working and I am very happy with how the elements have all come together to create what I feel is a great little DIY IOT light switch.
 
 Version two is in the works and I have completed the board design for the upgrade. I have ordeered some of teh parts and will be ordering the new boards shortly.
 
