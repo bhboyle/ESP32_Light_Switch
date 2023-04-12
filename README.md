@@ -31,6 +31,7 @@ I think there is still lots of work to be done but I am very happy with how this
 3. Complete the software for the ESP32-S3 **This is almost done**
 4. Design the enclosure in Fusion 360 **Done for version one of the boards. Version two will need some tweaks for the new board layouts.**
 5. Print and test the enclosure. **Initial testing is underway using PETG and I am happy so far.**
+6. Documentation on how to build the device.
 
 ## Features to add
 1. Over the Air updates. **Added using the [ElegantOTA lib](https://github.com/ayushsharma82/ElegantOTA). Tested and working**
