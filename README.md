@@ -33,7 +33,7 @@ I think there is still lots of work to be done but I am very happy with how this
 5. Print and test the enclosure. **Initial testing is underway using PETG and I am happy so far.**
 
 ## Features to add
-1. Over the Air updates ** added using the [ElegantOTA lib](https://github.com/ayushsharma82/ElegantOTA). **Tested and working**
+1. Over the Air updates **added using the [ElegantOTA lib](https://github.com/ayushsharma82/ElegantOTA). **Tested and working**
 2. Web server available at all times to look at status, variables and configuration **Tested and working**
 3. Light switch works no matter what even before being configured **Tested and working**
 4. MQTT triggering via node-red **Tested and working** 
