@@ -514,7 +514,7 @@ void createAP_IndexHtml()
   index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   index_html_AP.concat("<style>");
   index_html_AP.concat("input, textarea {border:3; padding:10px; border-radius: 8px 16px }");
-  index_html_AP.concat("input:focus { outline: none !important; border:1px solid red; box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; }");
+  index_html_AP.concat("input:focus { outline: none !important; border:1px solid goldenrod; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; }");
   index_html_AP.concat("</style>");
   index_html_AP.concat("</head>");
   index_html_AP.concat("<body>");
@@ -771,8 +771,8 @@ void createSettingHTML()
   settingsHTML.concat("<title>Smart Switch Configuration</title>");
   settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   settingsHTML.concat("<style>");
-  settingsHTML.concat("input, textarea {border:3; padding:10px; border-radius: 8px 16px }");
-  settingsHTML.concat("input:focus { outline: none !important; border:1px solid goldenrod; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; }");
+  settingsHTML.concat("input, textarea {border:3; padding:3px; border-radius: 8px 16px }");
+  settingsHTML.concat("input:focus { outline: none !important; border:3px solid OrangeRed; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; }");
   settingsHTML.concat("</style>");
   settingsHTML.concat("</head>");
   settingsHTML.concat("<script>");
@@ -808,7 +808,7 @@ void createSettingHTML()
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("<input type='submit' value='Submit'> <input type='button' value='Cancel' onclick='location.href=\"http:\/\/" + IP + "\"'/>");
   settingsHTML.concat("</form>");
-  settingsHTML.concat("Once the form is submitted the page will reload after 7 seconds");
+  settingsHTML.concat("<br>Once the form is submitted the page will reload after 7 seconds");
   settingsHTML.concat("</body>");
   settingsHTML.concat("</html>");
 
