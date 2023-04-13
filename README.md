@@ -27,7 +27,8 @@ For safety and simplicity sake, I used the [Mean Well IRM-02-5](https://www.digi
 The Preferences library is used to store the variables in the NV ram for retrieval after a power down.
 
 ## Todo
-The biggest remaining item on the list of things to do at this point for version one of this project is docimentation.
+* The biggest remaining item on the list of things to do at this point for version one of this project is documentation.
+* The next thing to be done is to order version two of the boards and test the new hardware and software.
 
 ### Build environment
 Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to compile the code in the Arduino IDE you simply need to get the main.cpp file from the SRC folder and put it in to your sketch folder. You will also need to gather and install the needed libraries.
