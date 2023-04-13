@@ -761,6 +761,9 @@ void updateTime()
 // configured switch.
 void createSettingHTML()
 {
+
+  IPAddress temp = WiFi.localIP();
+  String IP = String(temp[0]) + "." + String(temp[1]) + "." + String(temp[2]) + "." + String(temp[3]);
   settingsHTML = "";
   settingsHTML.concat("<!DOCTYPE HTML>");
   settingsHTML.concat("<html>");
@@ -769,7 +772,7 @@ void createSettingHTML()
   settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   settingsHTML.concat("<style>");
   settingsHTML.concat("input, textarea {border:3; padding:10px; border-radius: 8px 16px }");
-  settingsHTML.concat("input:focus { outline: none !important; border:1px solid red; box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; }");
+  settingsHTML.concat("input:focus { outline: none !important; border:1px solid goldenrod; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; }");
   settingsHTML.concat("</style>");
   settingsHTML.concat("</head>");
   settingsHTML.concat("<script>");
@@ -803,7 +806,7 @@ void createSettingHTML()
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("LED Brightness <input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
   settingsHTML.concat("<br><br>");
-  settingsHTML.concat("<input type=\"submit\" value=\"Submit\"> <input type='button' value='Cancel' onclick='history.back()'/>");
+  settingsHTML.concat("<input type='submit' value='Submit'> <input type='button' value='Cancel' onclick='location.href=\"http:\/\/" + IP + "\"'/>");
   settingsHTML.concat("</form>");
   settingsHTML.concat("Once the form is submitted the page will reload after 7 seconds");
   settingsHTML.concat("</body>");
