@@ -803,7 +803,7 @@ void createSettingHTML()
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("LED Brightness <input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
   settingsHTML.concat("<br><br>");
-  settingsHTML.concat("<input type=\"submit\" value=\"Submit\">");
+  settingsHTML.concat("<input type=\"submit\" value=\"Submit\"> <input type='button' value='Cancel' onclick='history.back()'/>");
   settingsHTML.concat("</form>");
   settingsHTML.concat("Once the form is submitted the page will reload after 7 seconds");
   settingsHTML.concat("</body>");
