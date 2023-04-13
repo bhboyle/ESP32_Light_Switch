@@ -513,9 +513,8 @@ void createAP_IndexHtml()
   index_html_AP.concat("<title>Smart Switch Configuration</title>");
   index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
   index_html_AP.concat("<style>");
-  index_html_AP.concat(".input {border:1; padding:10px; border-radius: 8px}");
-  index_html_AP.concat(".input:focus { outline: none !important; border:1px solid red; box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; }");
-
+  index_html_AP.concat("input, textarea {border:3; padding:10px; border-radius: 8px 16px }");
+  index_html_AP.concat("input:focus { outline: none !important; border:1px solid red; box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; }");
   index_html_AP.concat("</style>");
   index_html_AP.concat("</head>");
   index_html_AP.concat("<body>");
@@ -768,6 +767,10 @@ void createSettingHTML()
   settingsHTML.concat("<head>");
   settingsHTML.concat("<title>Smart Switch Configuration</title>");
   settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+  settingsHTML.concat("<style>");
+  settingsHTML.concat("input, textarea {border:3; padding:10px; border-radius: 8px 16px }");
+  settingsHTML.concat("input:focus { outline: none !important; border:1px solid red; box-shadow: rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px; }");
+  settingsHTML.concat("</style>");
   settingsHTML.concat("</head>");
   settingsHTML.concat("<script>");
   settingsHTML.concat("function updateSliderPWM(element)");
