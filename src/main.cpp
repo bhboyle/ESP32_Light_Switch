@@ -19,13 +19,16 @@
 #define ACS_Pin 10 // Sensor data pin on A0 analog input
 #define MY_NTP_SERVER "pool.ntp.org"
 #define MY_TZ "EST5EDT,M3.2.0,M11.1.0"
+#define VersionControlFlag 17
+#define Version1 20
+#define Version2 7
 // #define debug
 
 // variables
 
 int LightButton = 15;  // The input pin of the button that triggers the relay
 int FactoryReset = 16; // The input pin of the button that will trigger a factory reset
-int RelayPin = 20;     // The output pin that will trigger the relay
+int RelayPin;          // The output pin that will trigger the relay
 //                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9,...............
 String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
@@ -100,6 +103,18 @@ void createSettingHTML();
 // Start of setup function
 void setup()
 {
+
+  // check to see if the version control flag is set in hardware
+  pinMode(VersionControlFlag, INPUT);
+  if (digitalRead(VersionControlFlag))
+  {
+    RelayPin = Version2; // if so then set the relay pin to version 2
+  }
+  else
+  {
+    RelayPin = Version1; // if not then set it to version 1
+  }
+
   pixels.setBrightness(100); // Set BRIGHTNESS of the indicator Neopixel
   pixels.begin();            // INITIALIZE NeoPixel strip object (REQUIRED)
   pixels.clear();            // Set all pixel colors to 'off'
