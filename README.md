@@ -38,4 +38,4 @@ Just in case it is not obvious, I wanted to mention that the project is being wo
 ### DISCLAMER
 Please understand that this project uses mains power and if you do not know what your doing you can seriously harm or even kill yourself. In some places you may not even be legally allowed to install electrical equipment if you are not a licensed electrician. PLEASE be careful and if you are not confident do not do electrical work yourself. **You have been warned**
 
-[first image](Images/First_picture.jpg)
+![first image](Images/First_picture.jpg)
