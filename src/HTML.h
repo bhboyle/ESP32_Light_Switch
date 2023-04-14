@@ -4,7 +4,7 @@
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE HTML><html>
 <head>
-  <title>Boyle Smart Switch</title>
+  <title>BeBe Smart Switch</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     html {font-family: Arial; display: inline-block; text-align: center;}
@@ -37,7 +37,7 @@ const char index_html[] PROGMEM = R"rawliteral(
   </style>
 </head>
 <body>
-  <h2>Boyle smart light switch</h2>
+  <h2>BeBe smart light switch</h2>
   <div id=bottom-right>%SIGNALSTRENGTH%</div>
   %BUTTONPLACEHOLDER%
   <br><br><br>

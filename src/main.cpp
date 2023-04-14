@@ -35,7 +35,7 @@ String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
 int totalVariables = 10;
 String index_html_AP = "";            // String that will hold the web page code if the switch is not configured
 String settingsHTML = "";
-const char *ssidAP = "Boyle-Light";   // Access point SSID if the switch is not configured
+const char *ssidAP = "BeBe-Light";    // Access point SSID if the switch is not configured
 const char *passwordAP = "12345678";  // Access point password if the switch is not configured
 IPAddress local_ipAP(192, 168, 1, 1); // Access point IP, Netmask and gateway settings  if not configured
 IPAddress gatewayAP(192, 168, 1, 1);
@@ -108,7 +108,7 @@ void setup()
   pinMode(VersionControlFlag, INPUT);
   if (digitalRead(VersionControlFlag))
   {
-    RelayPin = Version2; // if so then set the relay pin to version 2
+    RelayPin = Version2; // if it is set then set the relay pin to version 2
   }
   else
   {
@@ -533,7 +533,7 @@ void createAP_IndexHtml()
   index_html_AP.concat("</style>");
   index_html_AP.concat("</head>");
   index_html_AP.concat("<body>");
-  index_html_AP.concat("<h2> Welcome the the Bolye Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
+  index_html_AP.concat("<h2> Welcome to the BeBe Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
   index_html_AP.concat("<form action=\"/get\">");
   for (int i = 0; i < totalVariables; i++)
   {
@@ -801,7 +801,7 @@ void createSettingHTML()
   settingsHTML.concat("}");
   settingsHTML.concat("</script>");
   settingsHTML.concat("<body>");
-  settingsHTML.concat("<h2> Welcome the the Bolye Smart Switch Settings page. </h2><br>");
+  settingsHTML.concat("<h2> Welcome to the BeBe Smart Switch Settings page. </h2><br>");
   settingsHTML.concat("<form action=\"/get\" onsubmit='setTimeout(function() { window.location.reload(); }, 7000)'>");
   settingsHTML.concat("Wifi SSID <input type='text' name=\"" + variablesArray[0] + "\" value=\"" + valuesArray[0] + "\">");
   settingsHTML.concat("<br><br>");
