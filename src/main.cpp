@@ -73,13 +73,19 @@ unsigned long lastTimeCheck = 0; // The last time we updated the time variables
 bool OnState = 0;                // this is used to tell if there is current flowing through the switch or not. This is used to indicate on or off status
 String sliderValue = "0";        // used to update the LED brightness value
 
+// This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
+String Style_HTML = R"---*(<style> 
+input, textarea {border:3; padding:3px; border-radius: 8px 16px } 
+input:focus { outline: none !important; border:3px solid OrangeRed; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; } 
+</style>)---*";
+
 // Object constructors
 WiFiClient wifiClient; // create the wifi object
 MQTTClient client;     // create the MQTT client object
-Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800);
-Preferences preferences;
-AsyncWebServer server_AP(80);
-RunningStatistics inputStats;
+Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800); // Create the object for the single Neopixel used for status indication
+Preferences preferences;                                                // Create the object that will hold and get the variables from NVram
+AsyncWebServer server_AP(80);                                           // Create the web server object
+RunningStatistics inputStats;                                           // Create the filer object that will be used to get the power usage in version two of the hardware
 
 // function declarations
 
@@ -408,7 +414,7 @@ void getPrefs()
 
     // Send a GET request to <ESP_IP>/info
     // used to get the status of the switch state via HTTP
-    // it will generate a JSON page wit the current status
+    // it will generate a JSON page with the current status
     server_AP.on("/info", HTTP_GET, [](AsyncWebServerRequest *request)
                  { 
                     String CurrentTime = String(tm.tm_hour) + ":" + String(tm.tm_min)  + ":" + String(tm.tm_sec);
@@ -527,10 +533,7 @@ void createAP_IndexHtml()
   index_html_AP.concat("<head>");
   index_html_AP.concat("<title>Smart Switch Configuration</title>");
   index_html_AP.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-  index_html_AP.concat("<style>");
-  index_html_AP.concat("input, textarea {border:3; padding:10px; border-radius: 8px 16px }");
-  index_html_AP.concat("input:focus { outline: none !important; border:1px solid goldenrod; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; }");
-  index_html_AP.concat("</style>");
+  index_html_AP.concat(Style_HTML);
   index_html_AP.concat("</head>");
   index_html_AP.concat("<body>");
   index_html_AP.concat("<h2> Welcome to the BeBe Smart Switch configuration page. Please note that all fields below are mandatory.</h2>");
@@ -776,19 +779,16 @@ void updateTime()
 // configured switch.
 void createSettingHTML()
 {
-
+  // get the current IP address
   IPAddress temp = WiFi.localIP();
-  String IP = String(temp[0]) + "." + String(temp[1]) + "." + String(temp[2]) + "." + String(temp[3]);
+  String IP = String(temp[0]) + "." + String(temp[1]) + "." + String(temp[2]) + "." + String(temp[3]); // and convert it to a string for use in a link
   settingsHTML = "";
   settingsHTML.concat("<!DOCTYPE HTML>");
   settingsHTML.concat("<html>");
   settingsHTML.concat("<head>");
   settingsHTML.concat("<title>Smart Switch Configuration</title>");
   settingsHTML.concat("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-  settingsHTML.concat("<style>");
-  settingsHTML.concat("input, textarea {border:3; padding:3px; border-radius: 8px 16px }");
-  settingsHTML.concat("input:focus { outline: none !important; border:3px solid OrangeRed; box-shadow: rgba(0, 0, 0, 0.3) 0px 8px 8px, rgba(0, 0, 0, 0.22) 0px 8px 8px; }");
-  settingsHTML.concat("</style>");
+  settingsHTML.concat(Style_HTML);
   settingsHTML.concat("</head>");
   settingsHTML.concat("<script>");
   settingsHTML.concat("function updateSliderPWM(element)");
@@ -806,7 +806,7 @@ void createSettingHTML()
   settingsHTML.concat("Wifi SSID <input type='text' name=\"" + variablesArray[0] + "\" value=\"" + valuesArray[0] + "\">");
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("Wifi Password <input type='password' name=\"" + variablesArray[1] + "\" value=\"" + valuesArray[1] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br> <br>");
   settingsHTML.concat("Device Hostname <input type='text' name=\"" + variablesArray[2] + "\" value=\"" + valuesArray[2] + "\">");
   settingsHTML.concat("<br><br>");
   settingsHTML.concat("MQTT Server Host IP <input type='text' name=\"" + variablesArray[3] + "\" value=\"" + valuesArray[3] + "\">");
