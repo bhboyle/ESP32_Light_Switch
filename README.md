@@ -28,11 +28,14 @@ At the heart of the project are two custom designed PCBs. There is a power board
 
 For safety and simplicity sake, I used the [Mean Well IRM-02-5](https://www.digikey.ca/en/products/detail/mean-well-usa-inc/IRM-02-5/7704628?s=N4IgTCBcDaIIwA4BsSC0BmADJgnKgcgCIgC6AvkA) 2 watt AC-DC converter. As with most things it is a compromise. In this case between simplicity, size, safety and cost. It is a little on the pricy side at $10 USD each but it makes it very simple to build the power supply and because it is a sealed housing it is nice and safe. This module creates 5 volts DC that drives the relay and the Neopixel and I use an LDO linear regulator to generate the 3.3 volts the ESP32 needs to operate.
 
+### The PCBs
+I have designed the boards in EasyEDA. Because if this ordering from JLCPCB is very easy. I have JLCPCB populate the boards. For the power/switching board I have them populate the back of the board which is all SMB components. the front side of the board has the power supply, relay, power connection terminals and the current monitor. They all have to be manually soldered. There are also a few discrete SMB components that have to be manually soldered. The control board I ordered fully populated except for the board to board connector because I prefer to manually solder it myself.
+
 ## Todo
 * The biggest remaining item on the list of things to do at this point for version one of this project is documentation.
 * The next thing to be done is to order version two of the boards and test the new hardware and software.
 
-### Build environment
+### Software Build environment
 Just in case it is not obvious, I wanted to mention that the project is being working on in VScode with the PlatformIO plugin. If you choose to compile the code in the Arduino IDE you simply need to get the main.cpp file from the SRC folder and put it in to your sketch folder. You will also need to gather and install the needed libraries.
 
 ### DISCLAMER
