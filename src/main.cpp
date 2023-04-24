@@ -184,19 +184,19 @@ void loop()
 // This function checks if the switch button is pressed and toggles the light is it has
 void handleSwitch()
 {
-  int temp = digitalRead(LightButton);
+  int temp = digitalRead(LightButton); // read the button pin
 
-  if (temp == 0)
+  if (temp == 0) // if the button has been pressed
   {
 
-    if (lightButtonState == 0)
+    if (lightButtonState == 0) // if the button pressed variable is not set do the following
     {
-      relayStatus = !relayStatus;
-      doSwitch(relayStatus);
-      lightButtonState = 1;
+      relayStatus = !relayStatus; // change the relay variable
+      doSwitch(relayStatus);      // change the state of the relay
+      lightButtonState = 1;       // set the button pressed variable
     }
   }
-  else
+  else // if the button is not pressed reset the button pressed variable. This stops debounce and stops the button from re-triggering the relay if it is held pressed
   {
     lightButtonState = 0;
   }
@@ -839,37 +839,40 @@ void createSettingHTML()
 
 } // end of createSettingHTML function
 
+// This function makes the LED "breath" depending on the relay state
+// If the relay is off then the LED will breath to indicate the relay is off.
+// If the relay is on the LED will state solid to indicate the relay is on.
 void handleLEDBreath()
 {
-  if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4)))
+  if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4))) // only adjust the display intensity if the correct amount of time has elapsed
   {
 
-    if (relayStatus == false)
+    if (relayStatus == false) // if the relay is off then breath the LED
     {
-      if (LEDBreathDirection == true)
+      if (LEDBreathDirection == true) // check to see whether or not to count up or down
       {
-        LEDBrightness++;
-        if (LEDBrightness > valuesArray[9].toInt()) //
+        LEDBrightness++;                            // count up
+        if (LEDBrightness > valuesArray[9].toInt()) // if at the top of the scale
         {
-          LEDBreathDirection = false;
+          LEDBreathDirection = false; // change directions
         }
-        pixels.setBrightness(LEDBrightness);
+        pixels.setBrightness(LEDBrightness); // set the LED to the new intensity
       }
-      else
+      else // if we need to count down
       {
-        LEDBrightness--;
-        if (LEDBrightness < 1)
+        LEDBrightness--;       // count down
+        if (LEDBrightness < 1) // dont go below zero
         {
-          LEDBreathDirection = true;
+          LEDBreathDirection = true; // reset count direction if at zero
         }
-        pixels.setBrightness(LEDBrightness);
+        pixels.setBrightness(LEDBrightness); // set the LED to the new intensity
       }
     }
-    else
+    else // if the Relay is on
     {
-      pixels.setBrightness(valuesArray[9].toInt());
+      pixels.setBrightness(valuesArray[9].toInt()); // set the LED to the maximum set point
     }
-    LEDLastTime = millis();
+    LEDLastTime = millis(); // keep track of the time for the next cycle
   }
 
 } // end of handle LEDbreath function
