@@ -22,6 +22,7 @@
 #define VersionControlFlag 17
 #define Version1 20
 #define Version2 7
+#define BreathDelay 2
 // #define debug
 
 // variables
@@ -72,6 +73,9 @@ tm tm;                           // the structure tm holds time information in a
 unsigned long lastTimeCheck = 0; // The last time we updated the time variables
 bool OnState = 0;                // this is used to tell if there is current flowing through the switch or not. This is used to indicate on or off status
 String sliderValue = "0";        // used to update the LED brightness value
+bool LEDBreathDirection = 0;
+unsigned long LEDLastTime;
+int LEDBrightness = 0;
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
 String Style_HTML = R"---*(<style> 
@@ -105,6 +109,7 @@ void HandleMQTTinfo();
 void checkCurrentSensor();
 void updateTime();
 void createSettingHTML();
+void handleLEDBreath();
 
 // Start of setup function
 void setup()
@@ -144,6 +149,8 @@ void setup()
   tzset();
   sntp_set_sync_interval(12 * 60 * 60 * 1000UL); // set the NTP server poll interval to every 12 hours
 
+  LEDLastTime = millis();
+
 } // end of setup function
 
 // main loop function
@@ -163,6 +170,8 @@ void loop()
   checkCurrentSensor();
 
   updateTime();
+
+  handleLEDBreath();
 
 } // End of main loop function
 
@@ -204,6 +213,7 @@ void doSwitch(int status)
   preferences.begin("configuration", false);
   preferences.putString(variablesArray[8].c_str(), valuesArray[8]); // store the relay state into NV ram
   preferences.end();
+
 } // end of doSwitch function
 
 // MQTT callback function to handle any trigger events from the MQTT server
@@ -828,3 +838,38 @@ void createSettingHTML()
   settingsHTML.concat("</html>");
 
 } // end of createSettingHTML function
+
+void handleLEDBreath()
+{
+  if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4)))
+  {
+
+    if (relayStatus == false)
+    {
+      if (LEDBreathDirection == true)
+      {
+        LEDBrightness++;
+        if (LEDBrightness > valuesArray[9].toInt()) //
+        {
+          LEDBreathDirection = false;
+        }
+        pixels.setBrightness(LEDBrightness);
+      }
+      else
+      {
+        LEDBrightness--;
+        if (LEDBrightness < 1)
+        {
+          LEDBreathDirection = true;
+        }
+        pixels.setBrightness(LEDBrightness);
+      }
+    }
+    else
+    {
+      pixels.setBrightness(valuesArray[9].toInt());
+    }
+    LEDLastTime = millis();
+  }
+
+} // end of handle LEDbreath function
