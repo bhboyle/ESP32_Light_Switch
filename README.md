@@ -20,6 +20,7 @@ I will use an integrated web server for manage the following features
  * Fits into a standard wall box in North America as a Decor style switch
  * 3D models for 3D printing the housing for the parts
  * links to the schematic and PCB designs for easy board ordering
+ * LED Indication of relay status. "Breathing" LED means relay is off. Solid LED means Relay is on.
 
  In addition to these features, there will be MQTT control of the switch as well as MQTT status updates of the switch.
 
