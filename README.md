@@ -40,7 +40,7 @@ In order to use this as a three way switch and have the device be aware of wheth
 Programming the device the first time has to be done via the USB C connector before the device is assembled. Once the initial programming is done the device can be programmed via the web interface by going to the following URL: http://deviceIp/update From here you can upload the firmware generated from platformIO.
 
 ## Todo
-* The biggest remaining item on the list of things to do at this point for version one of this project is documentation.
+* The biggest remaining item on the list of things to do at this point is documentation and code optimization. 
 
 
 ### Software Build environment
