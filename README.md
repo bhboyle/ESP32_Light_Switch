@@ -34,6 +34,9 @@ I have designed the boards in EasyEDA. Because if this ordering from JLCPCB is v
 
 #### All parts ordered for version two of the hardware. Waiting for boards to arrive.
 
+## Programming
+Programming the device the first time has to be done via the USB C connector before the device is assembled. Once the initial programming is done the device can be programmed via the web interface by going to the following URL: http://deviceIp/update From here you can upload the firmware generated from platformIO.
+
 ## Todo
 * The biggest remaining item on the list of things to do at this point for version one of this project is documentation.
 * The next thing to be done is to order version two of the boards and test the new hardware and software.
