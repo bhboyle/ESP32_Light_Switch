@@ -32,6 +32,8 @@ For safety and simplicity sake, I used the [Mean Well IRM-02-5](https://www.digi
 ### The PCBs
 I have designed the boards in EasyEDA. Because if this ordering from JLCPCB is very easy. I have JLCPCB populate the boards. For the power/switching board I have them populate the back of the board which is all SMB components. the front side of the board has the power supply, relay, power connection terminals and the current monitor. They all have to be manually soldered. There are also a few discrete SMB components that have to be manually soldered. The control board I ordered fully populated except for the board to board connector because I prefer to manually solder it myself. 
 
+In order to use this as a three way switch and have the device be aware of whether or not the lighting circuit is live or not you need to measure the current flowing through the lighting circuit. This is required because it is possible, in a three way circuit for the circuit to be live without the SPDT relay being engaged due to the nature of three way circuits. Anyone who has used an three light switch knows that the two switches can end up in any position. Because of this, I use a Hall effect current sensor to determine if the lighting circuit is live or not. This has the added benefit of being able to determine how much power the circuit is using over time. Code for this part of the project is still being worked on.
+
 #### All parts ordered for version two of the hardware. Waiting for boards to arrive.
 
 ## Programming
