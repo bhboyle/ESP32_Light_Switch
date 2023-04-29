@@ -42,7 +42,7 @@ Programming the device the first time has to be done via the USB C connector bef
 ## Todo
 * The biggest remaining item on the list of things to do at this point is documentation and code optimization. 
 
-## Parts List
+### Parts List
 [Here is a file](https://docs.google.com/spreadsheets/d/1vnkWm73apcbOtNqYmAgQMh_5zk3PtoovNklXcG1IaSc/edit?usp=sharing) that has links to the most of the harder to find parts or just parts that you have to solder yourself. 
 
 ### Software Build environment
