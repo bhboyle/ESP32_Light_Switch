@@ -680,17 +680,16 @@ String outputState()
 void checkFactoryReset()
 {
 
-  if (digitalRead(FactoryReset) == LOW)
+  if (digitalRead(FactoryReset) == LOW) // see if the factory reset button has been pressed
   {
 
-    if (button_press_time == 0)
+    if (button_press_time == 0) // if it has been pressed, start counting how long it has been pressed for
     {
-      button_press_time = millis();
-      Serial.println("button pressed.");
+      button_press_time = millis(); // take note of the time
     }
-    if (millis() - button_press_time > 10000)
+    if (millis() - button_press_time > 10000) // if it has been pressed for long enough, do the factory reset
     {
-      for (int i = 0; i < 10; i++)
+      for (int i = 0; i < 10; i++) // do light show to tell the user that a reset is imminent
       {
         setColor(255, 0, 0);
         delay(250);
@@ -698,9 +697,9 @@ void checkFactoryReset()
         delay(250);
       }
       button_press_time = 0;
-      nvs_flash_erase();
+      nvs_flash_erase(); // reset the NV ram
       nvs_flash_init();
-      ESP.restart();
+      ESP.restart(); // reboot ESP32
     }
   }
 
