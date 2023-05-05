@@ -19,10 +19,11 @@
 #define ACS_Pin 10 // Sensor data pin on A0 analog input
 #define MY_NTP_SERVER "pool.ntp.org"
 #define MY_TZ "EST5EDT,M3.2.0,M11.1.0"
-#define VersionControlFlag 17
-#define Version1 20
-#define Version2 7
-#define BreathDelay 2
+#define VersionControlFlag 17 // the pin to check to see if it is hardware version 2
+#define Version1 20           // the pin the relay is on in hardware version 1
+#define Version2 7            // the pin the relay is on in hardware version 2
+#define BreathDelay 2         // how long to wait before starting the next stage int the LED breath
+#define ResetTime 1000        // how many milliseconds to wait before doing factory reset
 // #define debug
 
 // variables
@@ -687,7 +688,7 @@ void checkFactoryReset()
     {
       button_press_time = millis(); // take note of the time
     }
-    if (millis() - button_press_time > 10000) // if it has been pressed for long enough, do the factory reset
+    if (millis() - button_press_time > ResetTime) // if it has been pressed for long enough, do the factory reset
     {
       for (int i = 0; i < 10; i++) // do light show to tell the user that a reset is imminent
       {
