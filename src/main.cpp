@@ -73,9 +73,9 @@ tm tm;                           // the structure tm holds time information in a
 unsigned long lastTimeCheck = 0; // The last time we updated the time variables
 bool OnState = 0;                // this is used to tell if there is current flowing through the switch or not. This is used to indicate on or off status
 String sliderValue = "0";        // used to update the LED brightness value
-bool LEDBreathDirection = 0;
-unsigned long LEDLastTime;
-int LEDBrightness = 0;
+bool LEDBreathDirection = 0;     // variable use for tracking if the LED is getting brighter or darker
+unsigned long LEDLastTime;       // Used for keeping track of when the LED was last updated
+int LEDBrightness = 0;           // This is the variable that holds the LED brightness value
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
 String Style_HTML = R"---*(<style> 
