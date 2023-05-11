@@ -164,15 +164,15 @@ void loop()
 
   handleSwitch();
 
-  checkFactoryReset();
+  //checkFactoryReset();
 
-  HandleMQTTinfo();
+ // HandleMQTTinfo();
 
-  checkCurrentSensor();
+ // checkCurrentSensor();
 
-  updateTime();
+ // updateTime();
 
-  handleLEDBreath();
+ // handleLEDBreath();
 
 } // End of main loop function
 
@@ -680,27 +680,27 @@ String outputState()
 // preferences and reboot the ESP32
 void checkFactoryReset()
 {
-
-  if (digitalRead(FactoryReset) == LOW) // see if the factory reset button has been pressed
-  {
-
-    if (button_press_time == 0) // if it has been pressed, start counting how long it has been pressed for
+  
+    if (digitalRead(FactoryReset) == LOW) // see if the factory reset button has been pressed
     {
-      button_press_time = millis(); // take note of the time
-    }
-    if (millis() - button_press_time > ResetTime) // if it has been pressed for long enough, do the factory reset
-    {
-      for (int i = 0; i < 10; i++) // do light show to tell the user that a reset is imminent
+
+      if (button_press_time == 0) // if it has been pressed, start counting how long it has been pressed for
       {
-        setColor(255, 0, 0);
-        delay(250);
-        setColor(0, 0, 255);
-        delay(250);
+        button_press_time = millis(); // take note of the time
       }
-      button_press_time = 0;
-      nvs_flash_erase(); // reset the NV ram
-      nvs_flash_init();
-      ESP.restart(); // reboot ESP32
+      if (millis() - button_press_time > ResetTime) // if it has been pressed for long enough, do the factory reset
+      {
+        for (int i = 0; i < 10; i++) // do light show to tell the user that a reset is imminent
+        {
+          setColor(255, 0, 0);
+          delay(250);
+          setColor(0, 0, 255);
+          delay(250);
+        }
+        button_press_time = 0;
+        nvs_flash_erase(); // reset the NV ram
+        nvs_flash_init();
+        ESP.restart(); // reboot ESP32
     }
   }
 
