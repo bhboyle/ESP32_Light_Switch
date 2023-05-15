@@ -172,7 +172,7 @@ void loop()
 
  // updateTime();
 
- // handleLEDBreath();
+  handleLEDBreath();
 
 } // End of main loop function
 
@@ -629,7 +629,7 @@ String processor(const String &var)
   {
     String buttons = "";
     String outputStateValue = outputState();
-    buttons += "<h4>The light is <span id=\"outputState\"></span></h4><br><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
+    buttons += "<h4>The " + valuesArray[2] + " light is <span id=\"outputState\"></span></h4><br><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"output\" " + outputStateValue + "><span class=\"slider\"></span></label>";
     return buttons;
   }
   if (var == "SIGNALSTRENGTH")
