@@ -8,7 +8,6 @@
 #include <nvs_flash.h>
 #include <ArduinoJson.h>
 #include <AsyncElegantOTA.h>
-#include <filters.h>
 #include "HTML.h"
 #include <time.h>
 #include "esp_sntp.h"
@@ -24,6 +23,7 @@
 #define Version2 7            // the pin the relay is on in hardware version 2
 #define BreathDelay 2         // how long to wait before starting the next stage int the LED breath
 #define ResetTime 1000        // how many milliseconds to wait before doing factory reset
+
 // #define debug
 
 // variables
@@ -62,10 +62,8 @@ bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT 
 float ACS_Value;                       // This is holding the analog reads of the current sensor
 float testFrequency = 60;              // how often to check the current sensor  (Hz)
 float windowLength = 40.0 / testFrequency; // how long to check the current sensor
-float intercept = 0;                       // calibration value for current sensor RMS value generation
-float slope = 0.0752;                      // calibration value for current sensor RMS value generation
 float Amps_TRMS;                           // estimated actual current in amps
-unsigned long currentReadInterval = 1000;  // how often to read the current sensor
+unsigned long currentReadInterval = 10;    // how often to read the current sensor
 unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
 unsigned long previousMillisTimeCheck = 0; // Used to track the last time we update the time variables
 int lightButtonState = 0;                  // used for making sure the light button is only pressed once for each press and release
@@ -77,6 +75,10 @@ String sliderValue = "0";        // used to update the LED brightness value
 bool LEDBreathDirection = 0;     // variable use for tracking if the LED is getting brighter or darker
 unsigned long LEDLastTime;       // Used for keeping track of when the LED was last updated
 int LEDBrightness = 0;           // This is the variable that holds the LED brightness value
+int lowValue = 4095;
+int highValue = 0;
+int currentReadCount = 0;
+bool configured = false;
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
 String Style_HTML = R"---*(<style> 
@@ -90,7 +92,6 @@ MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800); // Create the object for the single Neopixel used for status indication
 Preferences preferences;                                                // Create the object that will hold and get the variables from NVram
 AsyncWebServer server_AP(80);                                           // Create the web server object
-RunningStatistics inputStats;                                           // Create the filer object that will be used to get the power usage in version two of the hardware
 
 // function declarations
 
@@ -143,8 +144,6 @@ void setup()
 
   getPrefs();
 
-  inputStats.setWindowSecs(windowLength); // Set the window length for the current sensor readings
-
   configTime(0, 0, MY_NTP_SERVER); // 0, 0 because we will use TZ in the next line
   setenv("TZ", MY_TZ, 1);          // Set environment variable with your time zone
   tzset();
@@ -164,13 +163,13 @@ void loop()
 
   handleSwitch();
 
-  //checkFactoryReset();
+  checkFactoryReset();
 
- // HandleMQTTinfo();
+  HandleMQTTinfo();
 
- // checkCurrentSensor();
+  checkCurrentSensor();
 
- // updateTime();
+  updateTime();
 
   handleLEDBreath();
 
@@ -332,7 +331,7 @@ void setColor(int r, int g, int b)
 void getPrefs()
 {
   preferences.begin("configuration", false);
-  bool configured = preferences.getBool("configured", false);
+  configured = preferences.getBool("configured", false);
   if (configured)
   {
 
@@ -724,6 +723,9 @@ void HandleMQTTinfo()
     StaticJsonDocument<200> doc;          // start compiling the json dataset
     doc["relayState"] = relayStatus;      // add the relay state
     doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
+    doc["Current"] = Amps_TRMS;           // include how much current is currently flowing through the switch
+    doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
+
     char buffer[256];                     // start the conversion to a Char
     serializeJson(doc, buffer);           // do the conversion
     client.publish(PublishTopic, buffer); // send the message
@@ -735,17 +737,34 @@ void HandleMQTTinfo()
 void checkCurrentSensor()
 {
 
-  unsigned long currentTime = millis();
-
-  ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
-  inputStats.input(ACS_Value);     // log to Stats function
-
-  if ((currentTime - previousMillisSensor) > currentReadInterval)
+  if (currentReadCount > 20)
   {
-    previousMillisSensor = millis(); // update time
 
-    Amps_TRMS = intercept + slope * inputStats.sigma();
+    Amps_TRMS = (((highValue - lowValue) * .0008058608058608059) / 2 * .707) * 1000 / 145;
+    currentReadCount = 0;
+    lowValue = 4095;
+    highValue = 0;
   }
+  else
+  {
+
+    if ((millis() - previousMillisSensor) > currentReadInterval) // check to see if enough time has passed before checking the Current sensor
+    {
+        previousMillisSensor = millis(); // update time
+        ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
+
+        if (ACS_Value > highValue)
+        {
+          highValue = ACS_Value; // capture the highest sensor reading
+        }
+        if (ACS_Value < lowValue)
+        {
+          lowValue = ACS_Value; // capture the lowest sensor reading
+        }
+        currentReadCount++; // keep track of how many times we have checked the sensor
+    }
+  }
+
   // ******************************************************
   // the following is only going to work on Gen 2 boards
   // uncomment this for newer boards and adjust the reporting in the other functions
@@ -757,8 +776,6 @@ void checkCurrentSensor()
   //   OnState = false;
   //  }
   //  ****************************************************
-
-  // do something more here with the data for storing it somewhere
 
 } // end of checkCurrenSensor function
 
@@ -844,35 +861,39 @@ void createSettingHTML()
 // If the relay is on the LED will state solid to indicate the relay is on.
 void handleLEDBreath()
 {
-  if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4))) // only adjust the display intensity if the correct amount of time has elapsed
-  {
 
-    if (relayStatus == false) // if the relay is off then breath the LED
+  if (configured) // check to see if the switch has been configured. If it has then breath the LED
+  {
+    if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4))) // only adjust the display intensity if the correct amount of time has elapsed
     {
-      if (LEDBreathDirection == true) // check to see whether or not to count up or down
-      {
-        LEDBrightness++;                            // count up
-        if (LEDBrightness > valuesArray[9].toInt()) // if at the top of the scale
+
+        if (relayStatus == false) // if the relay is off then breath the LED
         {
-          LEDBreathDirection = false; // change directions
+          if (LEDBreathDirection == true) // check to see whether or not to count up or down
+          {
+          LEDBrightness++;                            // count up
+          if (LEDBrightness > valuesArray[9].toInt()) // if at the top of the scale
+          {
+            LEDBreathDirection = false; // change directions
+          }
+          pixels.setBrightness(LEDBrightness); // set the LED to the new intensity
+          }
+          else // if we need to count down
+          {
+          LEDBrightness--;       // count down
+          if (LEDBrightness < 1) // dont go below zero
+          {
+            LEDBreathDirection = true; // reset count direction if at zero
+          }
+          pixels.setBrightness(LEDBrightness); // set the LED to the new intensity
+          }
         }
-        pixels.setBrightness(LEDBrightness); // set the LED to the new intensity
-      }
-      else // if we need to count down
-      {
-        LEDBrightness--;       // count down
-        if (LEDBrightness < 1) // dont go below zero
+        else // if the Relay is on
         {
-          LEDBreathDirection = true; // reset count direction if at zero
+          pixels.setBrightness(valuesArray[9].toInt()); // set the LED to the maximum set point
         }
-        pixels.setBrightness(LEDBrightness); // set the LED to the new intensity
-      }
+        LEDLastTime = millis(); // keep track of the time for the next cycle
     }
-    else // if the Relay is on
-    {
-      pixels.setBrightness(valuesArray[9].toInt()); // set the LED to the maximum set point
-    }
-    LEDLastTime = millis(); // keep track of the time for the next cycle
   }
 
 } // end of handle LEDbreath function
