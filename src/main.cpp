@@ -75,10 +75,10 @@ String sliderValue = "0";        // used to update the LED brightness value
 bool LEDBreathDirection = 0;     // variable use for tracking if the LED is getting brighter or darker
 unsigned long LEDLastTime;       // Used for keeping track of when the LED was last updated
 int LEDBrightness = 0;           // This is the variable that holds the LED brightness value
-int lowValue = 4095;
-int highValue = 0;
-int currentReadCount = 0;
-bool configured = false;
+int lowValue = 4095;             // current sense low reading from the sensor
+int highValue = 0;               // current sense high reading from the sensor
+int currentReadCount = 0;        // reading counter for how many time the current sensor has been read
+bool configured = false;         // used to track if the switch is configured or not.
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
 String Style_HTML = R"---*(<style> 
@@ -862,7 +862,10 @@ void createSettingHTML()
 void handleLEDBreath()
 {
 
-  if (configured) // check to see if the switch has been configured. If it has then breath the LED
+  // Check to see if the switch has been configured. If it has then breath the LED.
+  // If this is not done the switch will go into a reboot cycle if the switch is not
+  // configured due to the accessing the valuesArray[9] while the switch is not configured
+  if (configured)
   {
     if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4))) // only adjust the display intensity if the correct amount of time has elapsed
     {
