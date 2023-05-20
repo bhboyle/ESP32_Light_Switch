@@ -753,11 +753,11 @@ void checkCurrentSensor()
         previousMillisSensor = millis(); // update time
         ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
 
-        if (ACS_Value > highValue)
+        if (ACS_Value > highValue | abs(ACS_Value - highValue) < 250) // added ABS to try an mitigate noise on current sensor output
         {
           highValue = ACS_Value; // capture the highest sensor reading
         }
-        if (ACS_Value < lowValue)
+        if (ACS_Value < lowValue | abs(ACS_Value - lowValue) < 250) // added ABS to try an mitigate noise on current sensor output
         {
           lowValue = ACS_Value; // capture the lowest sensor reading
         }
