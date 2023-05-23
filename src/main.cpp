@@ -24,13 +24,13 @@
 #define BreathDelay 2         // how long to wait before starting the next stage int the LED breath
 #define ResetTime 1000        // how many milliseconds to wait before doing factory reset
 #define noiseThreshold 200    // the number that we should use as a threshold to exclude current sensor measurements due to them being noise
+#define LightButton 15        // The input pin of the button that triggers the relay
+#define FactoryReset 16       // The input pin of the button that will trigger a factory reset
 
 // #define debug
 
 // variables
 
-int LightButton = 15;  // The input pin of the button that triggers the relay
-int FactoryReset = 16; // The input pin of the button that will trigger a factory reset
 int RelayPin;          // The output pin that will trigger the relay
 //                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9,...............
 String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
