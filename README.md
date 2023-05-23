@@ -1,5 +1,5 @@
 ## Status
-#### I have recived and bult version two of the hardware. I have found that the existing power filtering in the Schematic is inadiquit for the current sensor. I am building a second device that I have added two 22uF capacitors to the 3.3 volt power rail. I will be testing this week to see what impact it has. 
+#### I have received and built version two of the hardware. I have found that the existing power filtering in the Schematic is inadequate for the current sensor. I am building a second device that I have added two 22uF capacitors to the 3.3 volt power rail. I will be testing this week to see what impact it has.    
 #### I have completed and uploaded version two of the 3D model.
 
 ## Introduction
