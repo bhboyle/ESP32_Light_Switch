@@ -1,3 +1,7 @@
+## Status
+#### I have recived and bult version two of the hardware. I have found that the existing power filtering in the Schematic is inadiquit for the current sensor. I am building a second device that I have added two 22uF capacitors to the 3.3 volt power rail. I will be testing this week to see what impact it has. 
+#### I have completed and uploaded version two of the 3D model.
+
 ## Introduction
 This project is an open source ESP32 based Wifi MQTT light switch. The device fits into a "Decor" style switch box. Sonoff devices are interesting but they do not fit into a regular box along side other non-smart switches.
 
@@ -33,9 +37,6 @@ For safety and simplicity sake, I used the [Mean Well IRM-02-5](https://www.digi
 I have designed the boards in EasyEDA. Because if this ordering from JLCPCB is very easy. I have JLCPCB populate the boards. For the power/switching board I have them populate the back of the board which is all SMB components. the front side of the board has the power supply, relay, power connection terminals and the current monitor. They all have to be manually soldered. There are also a few discrete SMB components that have to be manually soldered. The control board I ordered fully populated except for the board to board connector because I prefer to manually solder it myself. 
 
 In order to use this as a three way switch and have the device be aware of whether or not the lighting circuit is live or not you need to measure the current flowing through the lighting circuit. This is required because it is possible, in a three way circuit for the circuit to be live without the SPDT relay being engaged due to the nature of three way circuits. Anyone who has used an three light switch knows that the two switches can end up in any position. Because of this, I use a Hall effect current sensor to determine if the lighting circuit is live or not. This has the added benefit of being able to determine how much power the circuit is using over time. Code for this part of the project is still being worked on.
-
-#### All parts ordered for version two of the hardware. 
-#### Version two of the boards have arrived and I have updated the 3D model for the new part placement. Waiting for 3D printer to finish printing to start testing V2!!!!
 
 ## Programming
 Programming the device the first time has to be done via the USB C connector before the device is assembled. Once the initial programming is done the device can be programmed via the web interface by going to the following URL: http://deviceIp/update From here you can upload the firmware generated from platformIO.
