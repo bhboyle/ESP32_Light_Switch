@@ -120,6 +120,7 @@ void setup()
 
   // check to see if the version control flag is set in hardware
   pinMode(VersionControlFlag, INPUT);
+  delay(100); // without this delay the switch occasionally hang on boot up. I think it has to do with reading the input state right after setting it to input
   if (digitalRead(VersionControlFlag))
   {
     RelayPin = Version2; // if it is set then set the relay pin to version 2
@@ -738,15 +739,16 @@ void HandleMQTTinfo()
 void checkCurrentSensor()
 {
 
-  if (currentReadCount > 20)
+  if (currentReadCount > 20) // if the sensor has been read a good amount of times then generate the curren amount
   {
 
-    Amps_TRMS = (((highValue - lowValue) * .0008058608058608059) / 2 * .707) * 1000 / 145;
-    currentReadCount = 0;
-    lowValue = 4095;
+    // get the difference between the reading variables, * ADC steps to get voltage, / 2*.707 to get RMS, *1000/145 to convert to amps
+    Amps_TRMS = (((highValue - lowValue) * .0008058608058608059) / 2 * .707) * 1000 / 145; // do lots of math :)
+    currentReadCount = 0;                                                                  // reset the read count
+    lowValue = 4095;                                                                       // reset the low and high capture variables
     highValue = 0;
   }
-  else
+  else // if we have not read the sensor enough times, do the readings
   {
 
     if ((millis() - previousMillisSensor) > currentReadInterval) // check to see if enough time has passed before checking the Current sensor
