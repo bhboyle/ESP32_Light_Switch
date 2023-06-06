@@ -2,8 +2,10 @@
 #### I have received and built version two of the hardware. I have found that the existing power filtering in the Schematic is inadequate for the current sensor. I am building a second device that I have added two 22uF capacitors to the 3.3 volt power rail. I will be testing this week to see what impact it has.    
 #### I have completed and uploaded version two of the 3D model.
 
-# NOTE
+## NOTE
+```
 Resistor R2 on the main control board was incorrect and has been replaced. It was until now (June 6th) 2023 a 1K and needs to be a 10K. It has been updated in the schematic but if you have ordered any boards before now you will have to replace the resistor manually. I believe this is the cause of the board not booting up correctly if it has not been powered up in a while.
+```
 
 ## Introduction
 This project is an open source ESP32 based Wifi MQTT light switch. The device fits into a "Decor" style switch box. Sonoff devices are interesting but they do not fit into a regular box along side other non-smart switches.
