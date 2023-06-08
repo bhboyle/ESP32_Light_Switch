@@ -20,7 +20,7 @@ I will use an integrated web server for manage the following features
 
 ### Additional features 
  * Remember power state for power failures using preferences lib
- * LED colors. <span style="color:red">Red</span> - Boot up, <span style="color:yellow">Yellow</span> - WIFI connected, <span style="color:green">Green</span> - WIFI and MQTT connected, <span style="color:blue">Blue</span> = AP is active.
+ * LED colors. Red = Boot up, Yellow = WIFI connected, Green = WIFI and MQTT connected, Blue = AP is active.
  * Fits into a standard wall box in North America as a Decor style switch
  * 3D models for 3D printing the housing for the parts
  * Links to the schematic and PCB designs for easy board ordering
