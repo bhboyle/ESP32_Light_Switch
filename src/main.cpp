@@ -120,7 +120,7 @@ void setup()
 
   // check to see if the version control flag is set in hardware
   pinMode(VersionControlFlag, INPUT);
-  delay(100); // without this delay the switch occasionally hang on boot up. I think it has to do with reading the input state right after setting it to input
+  delay(10); // I added this delay to make sure the input had settled before reading it status.
   if (digitalRead(VersionControlFlag))
   {
     RelayPin = Version2; // if it is set then set the relay pin to version 2
