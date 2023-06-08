@@ -1,5 +1,6 @@
 ## NOTE
-### Resistor R2 on the main control board was incorrect and has been replaced. It was, until now (June 6th) 2023, a 1K and needs to be a 10K. It has been updated in the schematic but if you have ordered any boards before now you will have to replace the resistor manually. CONFIRMED, this is the cause of the board not booting up correctly if it has not been powered up in a while.
+### Resistor R2 on the main control board was incorrect and has been replaced. It was, until now (June 6th) 2023, a 1K and needs to be a 10K. It has been updated in the schematic but if you have ordered any boards before now you will have to replace the resistor manually. 
+### CONFIRMED, this is the cause of the board not booting up correctly if it has not been powered up in a while.
 
 
 ## Introduction
