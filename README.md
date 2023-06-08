@@ -18,16 +18,14 @@ I will use an integrated web server for manage the following features
  * Web based OTA updates of the switch firmware
  * Web based settings update
  * Stand alone AP mode for initial configuration
-
-### Additional features 
  * Remember power state for power failures using preferences lib
  * LED colors. Red = Boot up, Yellow = WIFI connected, Green = WIFI and MQTT connected, Blue = AP is active.
  * Fits into a standard wall box in North America as a Decor style switch
  * 3D models for 3D printing the housing for the parts
  * Links to the schematic and PCB designs for easy board ordering
  * LED Indication of relay status. "Breathing" LED means relay is off. Solid LED means Relay is on.
-
- In addition to these features, there will be MQTT control of the switch as well as MQTT status updates of the switch.
+ * MQTT control of the switch
+ * MQTT status of switch
 
 ## Design
 At the heart of the project are two custom designed PCBs. There is a power board that handles the SPDT relay for AC switching, the conversion of the AC in to DC and provides both 5 volts DC and 3.3 volts DC to the controller board. The controller board has the ESP32 for control, communications and the buttons for triggering. There is a "light" button and a "factory" button. The light button is of course used to turn the light on and off while the factory button is used to do a factory reset. There is a Neopixel on the control board to indicate the status of the device in addition to a dedicated power led. [Here is a link](https://oshwlab.com/bhboyle/esp32-light-switch) to the EasyEDA project. This link will give you access to the schematics and board layouts. From there you can directly order boards from JLCPCB.
