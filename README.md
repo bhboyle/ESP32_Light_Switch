@@ -38,7 +38,7 @@ I have designed the boards in EasyEDA. Because if this ordering from JLCPCB is v
 
 In order to use this as a three way switch and have the device be aware of whether or not the lighting circuit is live or not you need to measure the current flowing through the lighting circuit. This is required because it is possible, in a three way circuit for the circuit to be live without the SPDT relay being engaged due to the nature of three way circuits. Anyone who has used an three light switch knows that the two switches can end up in any position. Because of this, I use a Hall effect current sensor to determine if the lighting circuit is live or not. This has the added benefit of being able to determine how much power the circuit is using over time. Code for this part of the project is still being worked on.
 
-I have updated the power supply board to unclude a LC filter on the 3.3 volt line. I have not tested this yet and it yet but it is a standard LC filter so it should work just fine. I have included an indicator to the schematic if you want to remove the filter from the circuit.
+I have updated the power supply board to include a LC filter on the 3.3 volt line. I have not tested this yet and it yet but it is a standard LC filter so it should work just fine. I have included an indicator to the schematic if you want to remove the filter from the circuit.
 
 ## Programming
 Programming the device the first time has to be done via the USB C connector before the device is assembled. Once the initial programming is done the device can be programmed via the web interface by going to the following URL: http://deviceIp/update From here you can upload the firmware generated from platformIO.
