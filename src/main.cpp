@@ -64,7 +64,7 @@ float ACS_Value;                       // This is holding the analog reads of th
 float testFrequency = 60;              // how often to check the current sensor  (Hz)
 float windowLength = 40.0 / testFrequency; // how long to check the current sensor
 float Amps_TRMS;                           // estimated actual current in amps
-unsigned long currentReadInterval = 10;    // how often to read the current sensor
+unsigned long currentReadInterval = 2;     // how often to read the current sensor
 unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
 unsigned long previousMillisTimeCheck = 0; // Used to track the last time we update the time variables
 int lightButtonState = 0;                  // used for making sure the light button is only pressed once for each press and release
@@ -79,6 +79,7 @@ int LEDBrightness = 0;           // This is the variable that holds the LED brig
 int lowValue = 4095;             // current sense low reading from the sensor
 int highValue = 0;               // current sense high reading from the sensor
 int currentReadCount = 0;        // reading counter for how many time the current sensor has been read
+int currentArrayCount = 0;       // used for tracking the Current array count position
 bool configured = false;         // used to track if the switch is configured or not.
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
@@ -152,6 +153,9 @@ void setup()
   sntp_set_sync_interval(12 * 60 * 60 * 1000UL); // set the NTP server poll interval to every 12 hours
 
   LEDLastTime = millis();
+
+  // std::fill_n(lowValue, 20, 4095); // reset the low and high capture variables
+  // std::fill_n(highValue, 20, 0);
 
 } // end of setup function
 
@@ -227,7 +231,27 @@ void MQTTcallBack(String topic, String payload)
     relayStatus = 0;
     doSwitch(relayStatus);
   }
+  else if (tempChar == "off")
+  {
+    relayStatus = 0;
+    doSwitch(relayStatus);
+  }
+  else if (tempChar == "false")
+  {
+    relayStatus = 0;
+    doSwitch(relayStatus);
+  }
   else if (tempChar == "1") // if it is a one then turn on the light
+  {
+    relayStatus = 1;
+    doSwitch(relayStatus);
+  }
+  else if (tempChar == "on")
+  {
+    relayStatus = 1;
+    doSwitch(relayStatus);
+  }
+  else if (tempChar == "true")
   {
     relayStatus = 1;
     doSwitch(relayStatus);
@@ -436,6 +460,8 @@ void getPrefs()
                     doc["WiFiStrength"] = WiFi.RSSI();
                     doc["date"] = CurrentDate;
                     doc["time"] = CurrentTime;
+                    doc["Current"] = Amps_TRMS; // include how much current is currently flowing through the switch
+                    // doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
                     char buffer[256];
                     serializeJson(doc, buffer);
                     request->send(200, "text/plain", buffer); });
@@ -721,16 +747,30 @@ void HandleMQTTinfo()
 
   if (MQTTinfoFlag) // check if the flag is set
   {
-    MQTTinfoFlag = false;                 // if it is, reset the flag
-    StaticJsonDocument<200> doc;          // start compiling the json dataset
-    doc["relayState"] = relayStatus;      // add the relay state
-    doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
-    doc["Current"] = Amps_TRMS;           // include how much current is currently flowing through the switch
-    doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
+    // MQTTinfoFlag = false;                 // if it is, reset the flag
+    // StaticJsonDocument<200> doc;          // start compiling the json dataset
+    // doc["relayState"] = relayStatus;      // add the relay state
+    // doc["WiFiStrength"] = WiFi.RSSI();    // add the WiFi signal strength
+    // doc["Current"] = Amps_TRMS;           // include how much current is currently flowing through the switch
+    // doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
 
-    char buffer[256];                     // start the conversion to a Char
-    serializeJson(doc, buffer);           // do the conversion
-    client.publish(PublishTopic, buffer); // send the message
+    // char buffer[256];                     // start the conversion to a Char
+    // serializeJson(doc, buffer);           // do the conversion
+    // client.publish(PublishTopic, buffer); // send the message
+
+    MQTTinfoFlag = false;
+    String temp = "0";
+
+    if (relayStatus)
+    {
+        temp = "1";
+    }
+    else
+    {
+        temp = "0";
+    }
+
+    client.publish(PublishTopic, temp); // send the message
   }
 
 } // end of HandleMQTTinfo function
@@ -739,13 +779,15 @@ void HandleMQTTinfo()
 void checkCurrentSensor()
 {
 
-  if (currentReadCount > 20) // if the sensor has been read a good amount of times then generate the curren amount
+  if (currentReadCount > 7) // if the sensor has been read a good amount of times then generate the curren amount
   {
 
-    // get the difference between the reading variables, * ADC steps to get voltage, / 2*.707 to get RMS, *1000/145 to convert to amps
-    Amps_TRMS = (((highValue - lowValue) * .0008058608058608059) / 2 * .707) * 1000 / 145; // do lots of math :)
-    currentReadCount = 0;                                                                  // reset the read count
-    lowValue = 4095;                                                                       // reset the low and high capture variables
+    // get the difference between the reading variables, * ADC steps to get voltage, divide by 132 mV to convert to amps
+    Amps_TRMS = ((highValue - lowValue) * .0008058608058608059) / .135; // do lots of math :)
+    currentReadCount = 0;                                               // reset the read count
+    // std::fill_n(lowValue, 20, 4095);                                                       // reset the low and high capture variables
+    // std::fill_n(highValue, 20, 0);
+    lowValue = 4095;
     highValue = 0;
   }
   else // if we have not read the sensor enough times, do the readings
@@ -756,11 +798,11 @@ void checkCurrentSensor()
         previousMillisSensor = millis(); // update time
         ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
 
-        if (ACS_Value > highValue && abs(ACS_Value - highValue) < noiseThreshold) // added ABS to try to mitigate noise on current sensor output
+        if (ACS_Value > highValue) // added ABS to try to mitigate noise on current sensor output
         {
           highValue = ACS_Value; // capture the highest sensor reading
         }
-        if (ACS_Value < lowValue && abs(ACS_Value - lowValue) < noiseThreshold) // added ABS to try to mitigate noise on current sensor output
+        if (ACS_Value < lowValue) // added ABS to try to mitigate noise on current sensor output
         {
           lowValue = ACS_Value; // capture the lowest sensor reading
         }
