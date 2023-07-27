@@ -1,7 +1,9 @@
 ## Issues
 Prior to June 6th 2023 Resistor R2 on the main control board was incorrect and has been replaced. It should have been a 10K. It has been updated in the schematic but if you have ordered any boards before now you will have to replace the resistor manually. 
 
-I have not been able to electronically remove the noise on the output of the current sensor. So I am going to try to do that in software. If anyone knows the current senor and has been able to remove the noise on the output please let me know.
+~~I have not been able to electronically remove the noise on the output of the current sensor. So I am going to try to do that in software. If anyone knows the current senor and has been able to remove the noise on the output please let me know.~~
+
+I have now all but given up on Hall Effect current monitoring. Many LED based lights have a waveform that looks a great deal like a heart beat on a heart monitor. This is very difficult to distinguish from the inherient noise on the Hall Sensor.  I have tried two different Hall sensors and they both are very noisey. So I am investigating shunt based Energy monitoring designs.
 
 ## Introduction
 This project is an open source ESP32 based Wifi MQTT light switch. The device fits into a "Decor" style switch box. Sonoff devices are interesting but they do not fit into a regular box along side other non-smart switches.
