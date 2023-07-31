@@ -11,11 +11,12 @@
 #include "HTML.h"
 #include <time.h>
 #include "esp_sntp.h"
+#include <CSE7766.h>
 #include <regex>
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
-#define ACS_Pin 10 // Sensor data pin on A0 analog input
+// #define ACS_Pin 10 // Sensor data pin on A0 analog input
 #define MY_NTP_SERVER "pool.ntp.org"
 #define MY_TZ "EST5EDT,M3.2.0,M11.1.0"
 #define VersionControlFlag 17 // the pin to check to see if it is hardware version 2
@@ -94,6 +95,7 @@ MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800); // Create the object for the single Neopixel used for status indication
 Preferences preferences;                                                // Create the object that will hold and get the variables from NVram
 AsyncWebServer server_AP(80);                                           // Create the web server object
+CSE7766 myCSE7759;
 
 // function declarations
 
@@ -139,7 +141,7 @@ void setup()
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
   pinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
-  pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
+  // pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
 
 #ifdef debug
   Serial.begin(115200);
@@ -154,8 +156,8 @@ void setup()
 
   LEDLastTime = millis();
 
-  // std::fill_n(lowValue, 20, 4095); // reset the low and high capture variables
-  // std::fill_n(highValue, 20, 0);
+  myCSE7759.setRX(10);
+  myCSE7759.begin();
 
 } // end of setup function
 
@@ -456,15 +458,19 @@ void getPrefs()
                     String CurrentTime = String(tm.tm_hour) + ":" + String(tm.tm_min)  + ":" + String(tm.tm_sec);
                     String CurrentDate = String(tm.tm_mon +1) + " " + String(tm.tm_mday) + " " + String(tm.tm_year +1900);
                     StaticJsonDocument<200> doc;
+                    doc["Host Name"] = valuesArray[2];
                     doc["relayState"] = relayStatus;
                     doc["WiFiStrength"] = WiFi.RSSI();
-                    doc["date"] = CurrentDate;
-                    doc["time"] = CurrentTime;
-                    doc["Current"] = Amps_TRMS; // include how much current is currently flowing through the switch
-                    // doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
-                    char buffer[256];
-                    serializeJson(doc, buffer);
-                    request->send(200, "text/plain", buffer); });
+                    doc["Date"] = CurrentDate;
+                    doc["Time"] = CurrentTime;
+                    if (digitalRead(VersionControlFlag)) // if it hardware version 2 or higher then display current
+                    {
+                      doc["Current"] = Amps_TRMS; // include how much current is currently flowing through the switch
+                      // doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
+                    }
+                      char buffer[256];
+                      serializeJson(doc, buffer);
+                      request->send(200, "text/plain", buffer); });
 
     createSettingHTML();
 
@@ -779,39 +785,15 @@ void HandleMQTTinfo()
 void checkCurrentSensor()
 {
 
-  if (currentReadCount > 7) // if the sensor has been read a good amount of times then generate the curren amount
+  if ((millis() - previousMillisSensor) > currentReadInterval) // check to see if enough time has passed before checking the Current sensor
   {
-
-    // get the difference between the reading variables, * ADC steps to get voltage, divide by 132 mV to convert to amps
-    Amps_TRMS = ((highValue - lowValue) * .0008058608058608059) / .135; // do lots of math :)
-    currentReadCount = 0;                                               // reset the read count
-    // std::fill_n(lowValue, 20, 4095);                                                       // reset the low and high capture variables
-    // std::fill_n(highValue, 20, 0);
-    lowValue = 4095;
-    highValue = 0;
-  }
-  else // if we have not read the sensor enough times, do the readings
-  {
-
-    if ((millis() - previousMillisSensor) > currentReadInterval) // check to see if enough time has passed before checking the Current sensor
-    {
-        previousMillisSensor = millis(); // update time
-        ACS_Value = analogRead(ACS_Pin); // read the analog value on the current sensor pin
-
-        if (ACS_Value > highValue) // added ABS to try to mitigate noise on current sensor output
-        {
-          highValue = ACS_Value; // capture the highest sensor reading
-        }
-        if (ACS_Value < lowValue) // added ABS to try to mitigate noise on current sensor output
-        {
-          lowValue = ACS_Value; // capture the lowest sensor reading
-        }
-        currentReadCount++; // keep track of how many times we have checked the sensor
-    }
+    previousMillisSensor = millis(); // update time
+    myCSE7759.handle();
+    ACS_Value = myCSE7759.getCurrent(); // read the analog value on the current sensor pin
   }
 
   // ******************************************************
-  // the following is only going to work on Gen 2 boards
+  // the following is only going to work on Gen 3 boards
   // uncomment this for newer boards and adjust the reporting in the other functions
   // to use this data to determine if the switch is on or off
 
