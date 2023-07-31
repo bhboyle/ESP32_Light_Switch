@@ -1,7 +1,7 @@
 ## Issues
-Prior to June 6th 2023 Resistor R2 on the main control board was incorrect and has been replaced. It should have been a 10K. It has been updated in the schematic but if you have ordered any boards before now you will have to replace the resistor manually. 
-
 I have now ordered version three of the power board. It uses a CSE7759 energy metering chip that uses a 1mO shunt resistor to measure the current flowing through the switch. I will have to modify the current monitoring code fairly heveily for the new energy metering to work. More to come... 
+
+Prior to June 6th 2023 Resistor R2 on the main control board was incorrect and has been replaced. It should have been a 10K. It has been updated in the schematic but if you have ordered any boards before now you will have to replace the resistor manually. 
 
 ## Introduction
 This project is an open source ESP32 based Wifi MQTT light switch. The device fits into a "Decor" style switch box. Sonoff devices are interesting but they do not fit into a regular box along side other non-smart switches.
