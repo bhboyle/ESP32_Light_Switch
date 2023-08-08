@@ -61,10 +61,10 @@ unsigned long button_release_time = 0; // also used for debouncing the buttons
 const char *PARAM_INPUT = "value";     // used to handle the slider that sets the LED brightness on the settings webpage of configured switches
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
 bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
-float ACS_Value;                       // This is holding the analog reads of the current sensor
+float Watts;                           // This is holding the Apparent power from the CSE7759
 float testFrequency = 60;              // how often to check the current sensor  (Hz)
 float windowLength = 40.0 / testFrequency; // how long to check the current sensor
-float Amps_TRMS;                           // estimated actual current in amps
+float Amps_TRMS;                           // estimated actual current in amps from the CSE7759
 unsigned long currentReadInterval = 2;     // how often to read the current sensor
 unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
 unsigned long previousMillisTimeCheck = 0; // Used to track the last time we update the time variables
@@ -103,6 +103,7 @@ void checkWIFI();
 void maintainMQTT();
 void setColor(int r, int g, int b);
 void getPrefs();
+String convert2String(int temp);
 bool ValidateIP(String IP);
 void createAP_IndexHtml();
 void handleSwitch();
@@ -455,8 +456,10 @@ void getPrefs()
     // it will generate a JSON page with the current status
     server_AP.on("/info", HTTP_GET, [](AsyncWebServerRequest *request)
                  { 
-                    String CurrentTime = String(tm.tm_hour) + ":" + String(tm.tm_min)  + ":" + String(tm.tm_sec);
-                    String CurrentDate = String(tm.tm_mon +1) + " " + String(tm.tm_mday) + " " + String(tm.tm_year +1900);
+                    
+                    
+                    String CurrentTime = convert2String(tm.tm_hour) + ":" + convert2String(tm.tm_min)  + ":" + convert2String(tm.tm_sec);
+                    String CurrentDate = String(tm.tm_mon +1) + "/" + String(tm.tm_mday) + "/" + String(tm.tm_year +1900);
                     StaticJsonDocument<200> doc;
                     doc["Host Name"] = valuesArray[2];
                     doc["relayState"] = relayStatus;
@@ -466,7 +469,7 @@ void getPrefs()
                     if (digitalRead(VersionControlFlag)) // if it hardware version 2 or higher then display current
                     {
                       doc["Current"] = Amps_TRMS; // include how much current is currently flowing through the switch
-                      // doc["Watts"] = Amps_TRMS * 127;       // include how much current is currently flowing through the switch
+                      doc["Watts"] = Watts;       // include how much current is currently flowing through the switch
                     }
                       char buffer[256];
                       serializeJson(doc, buffer);
@@ -565,6 +568,22 @@ void getPrefs()
   }
 
 } // end of getPrefs function
+
+// This function is used by the /info web page to correctly display the time with
+// leading zeros in front of numbers that are below 10
+String convert2String(int temp)
+{
+  if (temp > 9)
+  {
+    return String(temp);
+  }
+  else
+  {
+    String result = "0";
+    result += String(temp);
+    return result;
+  }
+}
 
 // This function generates the HTML for thw Access point mode at initial startup
 void createAP_IndexHtml()
@@ -789,7 +808,9 @@ void checkCurrentSensor()
   {
     previousMillisSensor = millis(); // update time
     myCSE7759.handle();
-    ACS_Value = myCSE7759.getCurrent(); // read the analog value on the current sensor pin
+    // ACS_Value = myCSE7759.getCurrent(); // ACS_Value currently not used
+    Amps_TRMS = myCSE7759.getCurrent();   // Check the CSE7759 and get its current
+    Watts = myCSE7759.getApparentPower(); // get watts
   }
 
   // ******************************************************
@@ -808,6 +829,7 @@ void checkCurrentSensor()
 
 // This function makes sure the device always knows the current time
 // and keeps that time in the TM struct
+// ***This will be used later to track power use over time***
 void updateTime()
 {
 
