@@ -16,7 +16,7 @@
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
-// #define ACS_Pin 10 // Sensor data pin on A0 analog input
+
 #define MY_NTP_SERVER "pool.ntp.org"
 #define MY_TZ "EST5EDT,M3.2.0,M11.1.0"
 #define VersionControlFlag 17 // the pin to check to see if it is hardware version 2
@@ -24,7 +24,6 @@
 #define Version2 7            // the pin the relay is on in hardware version 2
 #define BreathDelay 2         // how long to wait before starting the next stage int the LED breath
 #define ResetTime 1000        // how many milliseconds to wait before doing factory reset
-#define noiseThreshold 200    // the number that we should use as a threshold to exclude current sensor measurements due to them being noise
 #define LightButton 15        // The input pin of the button that triggers the relay
 #define FactoryReset 16       // The input pin of the button that will trigger a factory reset
 
@@ -38,7 +37,7 @@ String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName
 String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
 int totalVariables = 10;
 String index_html_AP = "";            // String that will hold the web page code if the switch is not configured
-String settingsHTML = "";
+String settingsHTML = "";             // String that will hold the settings web page code of a configured switch
 const char *ssidAP = "BeBe-Light";    // Access point SSID if the switch is not configured
 const char *passwordAP = "12345678";  // Access point password if the switch is not configured
 IPAddress local_ipAP(192, 168, 1, 1); // Access point IP, Netmask and gateway settings  if not configured
@@ -63,11 +62,9 @@ const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent t
 bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
 float Watts;                           // This is holding the Apparent power from the CSE7759
 float testFrequency = 60;              // how often to check the current sensor  (Hz)
-float windowLength = 40.0 / testFrequency; // how long to check the current sensor
 float Amps_TRMS;                           // estimated actual current in amps from the CSE7759
-unsigned long currentReadInterval = 2;     // how often to read the current sensor
+unsigned long currentReadInterval = 1000;  // how often to read the current sensor in milliseconds
 unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
-unsigned long previousMillisTimeCheck = 0; // Used to track the last time we update the time variables
 int lightButtonState = 0;                  // used for making sure the light button is only pressed once for each press and release
 time_t now;                      // this is the epoch
 tm tm;                           // the structure tm holds time information in a more convenient way
@@ -77,10 +74,6 @@ String sliderValue = "0";        // used to update the LED brightness value
 bool LEDBreathDirection = 0;     // variable use for tracking if the LED is getting brighter or darker
 unsigned long LEDLastTime;       // Used for keeping track of when the LED was last updated
 int LEDBrightness = 0;           // This is the variable that holds the LED brightness value
-int lowValue = 4095;             // current sense low reading from the sensor
-int highValue = 0;               // current sense high reading from the sensor
-int currentReadCount = 0;        // reading counter for how many time the current sensor has been read
-int currentArrayCount = 0;       // used for tracking the Current array count position
 bool configured = false;         // used to track if the switch is configured or not.
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
@@ -470,6 +463,7 @@ void getPrefs()
                     {
                       doc["Current"] = Amps_TRMS; // include how much current is currently flowing through the switch
                       doc["Watts"] = Watts;       // include how much current is currently flowing through the switch
+                      doc["Voltage"] = myCSE7759.getVoltage();
                     }
                       char buffer[256];
                       serializeJson(doc, buffer);
