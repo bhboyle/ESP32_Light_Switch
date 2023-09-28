@@ -1,3 +1,6 @@
+## Ideas
+I was thinking it might be a good idea to add the ability to backup and restore configurations. I hope to not have to replace these devices often but if you do have to it would be nice to have a backup of the configuration and just restire that to a new device. So I think I will make this the next feature I add to the firmware.
+
 ## Issues
 I have now ordered version three of the power board. It uses a CSE7759 energy metering chip that uses a 1 milli-ohm shunt resistor to measure the current flowing through the switch. I will have to modify the current monitoring code fairly heavily for the new energy metering to work. More to come... 
 
