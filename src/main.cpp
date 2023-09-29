@@ -469,6 +469,24 @@ void getPrefs()
                       serializeJson(doc, buffer);
                       request->send(200, "text/plain", buffer); });
 
+    // generate the configuration file and send it for download
+    server_AP.on("/export", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      StaticJsonDocument<200> doc;
+      doc["SSID"] = valuesArray[0];
+      doc["network Password"] = valuesArray[1];
+      doc["Host Name"] = valuesArray[2];
+      doc["MQTT IP"] = valuesArray[3];
+      doc["User Name"] = valuesArray[4];
+      doc["MQTT Password"] = valuesArray[5];
+      doc["Publish Topic"] = valuesArray[6];
+      doc["Sub Topic"] = valuesArray[7];
+      doc["Relay State"] = valuesArray[8];
+      doc["LED Brightness"] = valuesArray[9];
+
+      serializeJson(doc, buffer);
+      request->send(200, "text/plain", buffer); });
+
     createSettingHTML();
 
     server_AP.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -894,6 +912,7 @@ void createSettingHTML()
   settingsHTML.concat("<input type='submit' value='Submit'> <input type='button' value='Cancel' onclick='location.href=\"http:\/\/" + IP + "\"'/>");
   settingsHTML.concat("</form>");
   settingsHTML.concat("<br>Once the form is submitted the page will reload after 7 seconds");
+  settingsHTML.concat("<div text-align: right>  <a href=\"http:\/\/" + IP + "/export\" download='" + valuesArray[2] + ".cfg '>Download Config</a> </div>");
   settingsHTML.concat("</body>");
   settingsHTML.concat("</html>");
 
