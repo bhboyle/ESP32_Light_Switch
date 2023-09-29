@@ -483,7 +483,7 @@ void getPrefs()
       doc["Sub Topic"] = valuesArray[7];
       doc["Relay State"] = valuesArray[8];
       doc["LED Brightness"] = valuesArray[9];
-
+      char buffer[256];
       serializeJson(doc, buffer);
       request->send(200, "text/plain", buffer); });
 
