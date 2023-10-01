@@ -472,7 +472,7 @@ void getPrefs()
     // generate the configuration file and send it for download
     server_AP.on("/export", HTTP_GET, [](AsyncWebServerRequest *request)
                  {
-      StaticJsonDocument<200> doc;
+      StaticJsonDocument<300> doc;
       doc["SSID"] = valuesArray[0];
       doc["network Password"] = valuesArray[1];
       doc["Host Name"] = valuesArray[2];
@@ -483,7 +483,7 @@ void getPrefs()
       doc["Sub Topic"] = valuesArray[7];
       doc["Relay State"] = valuesArray[8];
       doc["LED Brightness"] = valuesArray[9];
-      char buffer[256];
+      char buffer[300];
       serializeJson(doc, buffer);
       request->send(200, "text/plain", buffer); });
 
@@ -912,7 +912,7 @@ void createSettingHTML()
   settingsHTML.concat("<input type='submit' value='Submit'> <input type='button' value='Cancel' onclick='location.href=\"http:\/\/" + IP + "\"'/>");
   settingsHTML.concat("</form>");
   settingsHTML.concat("<br>Once the form is submitted the page will reload after 7 seconds");
-  settingsHTML.concat("<div text-align: right>  <a href=\"http:\/\/" + IP + "/export\" download='" + valuesArray[2] + ".cfg '>Download Config</a> </div>");
+  settingsHTML.concat("<div align='right'><a href='http:\/\/" + IP + "/export' download='" + valuesArray[2] + ".cfg' >Download Config</a> </div>");
   settingsHTML.concat("</body>");
   settingsHTML.concat("</html>");
 
