@@ -1,10 +1,12 @@
 ## Ideas
 I was thinking it might be a good idea to add the ability to backup and restore configurations. I hope to not have to replace these devices often but if you do have to it would be nice to have a backup of the configuration and just restore that to a new device. So I think I will make this the next feature I add to the firmware.
 
+I have added the ability to export the switches configuration. Please note, the passwords like wifi and MQTT passwords are in plain text. This is not a problem for me but you may be concerned about this. The import of the config file still needs to be coded.
+
 ## Issues
 I have now ordered version three of the power board. It uses a CSE7759 energy metering chip that uses a 1 milli-ohm shunt resistor to measure the current flowing through the switch. I will have to modify the current monitoring code fairly heavily for the new energy metering to work. More to come... 
 
-Version 3 of the power board DOES NOT WORK. Well more accuratey the energy metering does not work. Do not use it. It blows components all over the place. Now on to version 4...
+Version 3 of the power board DOES NOT WORK. Well more accurately the energy metering does not work. Do not use it. It blows components all over the place. Now on to version 4...
 
 Almost done version 4 of the power board. I will be ordering them shortly and test them.
 
