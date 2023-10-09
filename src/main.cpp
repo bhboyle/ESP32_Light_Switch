@@ -110,6 +110,7 @@ void checkCurrentSensor();
 void updateTime();
 void createSettingHTML();
 void handleLEDBreath();
+void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
 
 // Start of setup function
 void setup()
@@ -135,7 +136,7 @@ void setup()
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
   pinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
-  // pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
+                                       // pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
 
 #ifdef debug
   Serial.begin(115200);
@@ -487,10 +488,15 @@ void getPrefs()
       serializeJson(doc, buffer);
       request->send(200, "text/plain", buffer); });
 
-    createSettingHTML();
+    server_AP.on(
+        "/import", HTTP_GET, [](AsyncWebServerRequest *request)
+        { request->send(200); },
+        handleUpload);
 
     server_AP.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request)
-                 { request->send_P(200, "text/html", settingsHTML.c_str()); });
+                 { 
+                  createSettingHTML();
+                  request->send_P(200, "text/html", settingsHTML.c_str()); });
 
     // Send a GET request to <ESP_IP>/slider?value=<inputMessage>
     server_AP.on("/slider", HTTP_GET, [](AsyncWebServerRequest *request)
@@ -889,26 +895,26 @@ void createSettingHTML()
   settingsHTML.concat("}");
   settingsHTML.concat("</script>");
   settingsHTML.concat("<body>");
-  settingsHTML.concat("<h2> Welcome to the BeBe Smart Switch Settings page. </h2><br>");
+  settingsHTML.concat("<h2> Welcome to the BeBe Smart Switch Settings page. </h2>");
   settingsHTML.concat("<form action=\"/get\" onsubmit='setTimeout(function() { window.location.reload(); }, 7000)'>");
   settingsHTML.concat("Wifi SSID <input type='text' name=\"" + variablesArray[0] + "\" value=\"" + valuesArray[0] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("Wifi Password <input type='password' name=\"" + variablesArray[1] + "\" value=\"" + valuesArray[1] + "\">");
-  settingsHTML.concat("<br> <br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("Device Hostname <input type='text' name=\"" + variablesArray[2] + "\" value=\"" + valuesArray[2] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("MQTT Server Host IP <input type='text' name=\"" + variablesArray[3] + "\" value=\"" + valuesArray[3] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("MQTT Username <input type='text' name=\"" + variablesArray[4] + "\" value=\"" + valuesArray[4] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("MQTT Password <input type='password' name=\"" + variablesArray[5] + "\" value=\"" + valuesArray[5] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("Publish Topic <input type='text' name=\"" + variablesArray[6] + "\" value=\"" + valuesArray[6] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("Subscribe Topic <input type='text' name=\"" + variablesArray[7] + "\" value=\"" + valuesArray[7] + "\">");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("LED Brightness <input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
-  settingsHTML.concat("<br><br>");
+  settingsHTML.concat("<br>");
   settingsHTML.concat("<input type='submit' value='Submit'> <input type='button' value='Cancel' onclick='location.href=\"http:\/\/" + IP + "\"'/>");
   settingsHTML.concat("</form>");
   settingsHTML.concat("<br>Once the form is submitted the page will reload after 7 seconds");
@@ -962,3 +968,31 @@ void handleLEDBreath()
   }
 
 } // end of handle LEDbreath function
+
+// This function will handle the file upload to allow for uploading a configuration file.
+// It will accept the uploaded file, convert it to a JSON string anf then deserialize it.
+// Then it will present the data to the user for saving.
+void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+{
+
+  String temp = "";
+
+  for (int i = 0; i < len; i++)
+  {
+    temp += data[i];
+  }
+
+  StaticJsonDocument<300> doc;
+  DeserializationError error = deserializeJson(doc, temp);
+
+  valuesArray[0] = doc["SSID"].as<String>();
+  valuesArray[1] = doc["network Password"].as<String>();
+  valuesArray[2] = doc["Host Name"].as<String>();
+  valuesArray[3] = doc["MQTT IP"].as<String>();
+  valuesArray[4] = doc["User Name"].as<String>();
+  valuesArray[5] = doc["MQTT Password"].as<String>();
+  valuesArray[6] = doc["Publish Topic"].as<String>();
+  valuesArray[7] = doc["Sub Topic"].as<String>();
+  valuesArray[8] = doc["Relay State"].as<String>();
+  valuesArray[9] = doc["LED Brightness"].as<String>();
+}
