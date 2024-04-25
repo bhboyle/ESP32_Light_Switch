@@ -1,3 +1,6 @@
+## Problems
+Still having issues with the power on detection for three way mode. I have looked it how Sonoff devices do this but I dont think that will work for me here. If you have ideas how to do this please let me know.
+
 ## Ideas
 I was thinking it might be a good idea to add the ability to backup and restore configurations. I hope to not have to replace these devices often but if you do have to it would be nice to have a backup of the configuration and just restore that to a new device. So I think I will make this the next feature I add to the firmware.
 
