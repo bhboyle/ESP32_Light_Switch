@@ -42,10 +42,16 @@ const char index_html[] PROGMEM = R"rawliteral(
   %BUTTONPLACEHOLDER%
   <br><br><br>
   <a href="/settings" >Settings Page</a>
+  %THREEWAYPLACEHOLDER%
 <script>function toggleCheckbox(element) {
   var xhr = new XMLHttpRequest();
   if(element.checked){ xhr.open("GET", "/refresh?state=1", true); }
   else { xhr.open("GET", "/refresh?state=0", true); }
+  xhr.send();
+}
+function setLightState(state) {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "/api/setlight?state=" + state, true);
   xhr.send();
 }
 

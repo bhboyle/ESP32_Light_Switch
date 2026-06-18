@@ -1,6 +1,15 @@
 {
+  "port": "COM10",
+  "board": "esp32:esp32:esp32wrover",
+  "output": "../ArduinoOutput",
+  "configuration": "PartitionScheme=default,FlashMode=qio,FlashFreq=80,UploadSpeed=921600,DebugLevel=none,EraseFlash=none",
+  "monitorPortSettings": {
     "port": "COM10",
-    "board": "esp32:esp32:esp32wrover",
-    "output": "../ArduinoOutput",
-    "configuration": "PartitionScheme=default,FlashMode=qio,FlashFreq=80,UploadSpeed=921600,DebugLevel=none,EraseFlash=none"
+    "baudRate": 115200,
+    "lineEnding": "\r\n",
+    "dataBits": 8,
+    "parity": "none",
+    "stopBits": "one"
+  },
+  "optimize_for_debug": false
 }
