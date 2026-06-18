@@ -11,8 +11,8 @@
 #include "HTML.h"
 #include <time.h>
 #include "esp_sntp.h"
-#include <CSE7766.h>
 #include <regex>
+#include <HTTPClient.h>
 
 #define NeoPixelPin 18
 #define NUMPIXELS 1
@@ -23,7 +23,7 @@
 #define Version1 20           // the pin the relay is on in hardware version 1
 #define Version2 7            // the pin the relay is on in hardware version 2
 #define BreathDelay 2         // how long to wait before starting the next stage int the LED breath
-#define ResetTime 1000        // how many milliseconds to wait before doing factory reset
+#define ResetTime 10000        // how many milliseconds to wait before doing factory reset
 #define LightButton 15        // The input pin of the button that triggers the relay
 #define FactoryReset 16       // The input pin of the button that will trigger a factory reset
 
@@ -33,9 +33,9 @@
 
 int RelayPin;          // The output pin that will trigger the relay
 //                               0 ,    1      ,  2  ,         3   ,       4   ,         5   ,           6,      7      ,      8,              9,...............
-String variablesArray[10] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness"};
-String valuesArray[10] = {"", "", "", "", "", "", "", "", "", ""};
-int totalVariables = 10;
+String variablesArray[13] = {"ssid", "password", "HostName", "MQTTIP", "UserName", "Password", "PublishTopic", "SubTopic", "RelayState", "LEDBrightness", "ThreeWayMode", "ThreeWayRole", "PartnerIP"};
+String valuesArray[13] = {"", "", "", "", "", "", "", "", "", "", "", "", ""};
+int totalVariables = 13;
 String index_html_AP = "";            // String that will hold the web page code if the switch is not configured
 String settingsHTML = "";             // String that will hold the settings web page code of a configured switch
 const char *ssidAP = "BeBe-Light";    // Access point SSID if the switch is not configured
@@ -45,14 +45,14 @@ IPAddress gatewayAP(192, 168, 1, 1);
 IPAddress subnetAP(255, 255, 255, 0);
 bool WifiAPStatus = false; // used to track if in access point mode or not and if not then connect to the configured network
 bool relayStatus = 0;      // used to hold the status of the relay
-char ssid[32];             // SSID variable for connecting to the configured network
-char ssidPassword[32];     // SSID password for connecting to the configured network
+char ssid[33];             // SSID variable for connecting to the configured network (32 + null terminator)
+char ssidPassword[64];     // SSID password for connecting to the configured network
 char Hostname[32];         // The hostname of the device used for the DNS settings and the MQTT server
 IPAddress MQTTserver; // address of the MQTT server
 char MQTTuser[32];    // username for connecting to the MQTT server
-char MQTTpass[32];    // Password for connecting to the MQTT server
-char PublishTopic[32]; // The MQTT topic that the device will publish to with the status of the relay or other things.
-char SubTopic[32];     // MQTT topic that we will subscribe to for triggering
+char MQTTpass[64];    // Password for connecting to the MQTT server
+char PublishTopic[128]; // The MQTT topic that the device will publish to with the status of the relay or other things.
+char SubTopic[128];     // MQTT topic that we will subscribe to for triggering
 bool allSet = false; // used for checking the web page
 int inputError = -1; // used during processing if input fields on the configuration web page
 unsigned long button_press_time = 0;   // used to debouncing the buttons
@@ -60,21 +60,19 @@ unsigned long button_release_time = 0; // also used for debouncing the buttons
 const char *PARAM_INPUT = "value";     // used to handle the slider that sets the LED brightness on the settings webpage of configured switches
 const char *PARAM_INPUT_1 = "state";   // used to manage the data that is sent to the ESP32 during configuration
 bool MQTTinfoFlag = 0;                 // used because you can not send an MQTT message in the call back. This flag is turned on then we send a message in the loop
-float Watts;                           // This is holding the Apparent power from the CSE7759
-float testFrequency = 60;              // how often to check the current sensor  (Hz)
-float Amps_TRMS;                           // estimated actual current in amps from the CSE7759
-unsigned long currentReadInterval = 1000;  // how often to read the current sensor in milliseconds
-unsigned long previousMillisSensor = 0;    // Used to track the last time we checked the current sensor
 int lightButtonState = 0;                  // used for making sure the light button is only pressed once for each press and release
 time_t now;                      // this is the epoch
 tm tm;                           // the structure tm holds time information in a more convenient way
 unsigned long lastTimeCheck = 0; // The last time we updated the time variables
-bool OnState = 0;                // this is used to tell if there is current flowing through the switch or not. This is used to indicate on or off status
 String sliderValue = "0";        // used to update the LED brightness value
 bool LEDBreathDirection = 0;     // variable use for tracking if the LED is getting brighter or darker
 unsigned long LEDLastTime;       // Used for keeping track of when the LED was last updated
 int LEDBrightness = 0;           // This is the variable that holds the LED brightness value
 bool configured = false;         // used to track if the switch is configured or not.
+bool threeWayMode = false;       // Whether three-way sync mode is enabled
+String threeWayRole = "";        // "primary" or "secondary"
+String partnerIP = "";           // IP address of the partner switch
+bool lightState = false;         // Tracks whether the light is actually ON or OFF
 
 // This raw string is used to define the CSS styling for both versions of the configuration pages. Changes here will affect both pages.
 String Style_HTML = R"---*(<style> 
@@ -88,7 +86,6 @@ MQTTClient client;     // create the MQTT client object
 Adafruit_NeoPixel pixels(NUMPIXELS, NeoPixelPin, NEO_GRB + NEO_KHZ800); // Create the object for the single Neopixel used for status indication
 Preferences preferences;                                                // Create the object that will hold and get the variables from NVram
 AsyncWebServer server_AP(80);                                           // Create the web server object
-CSE7766 myCSE7759;
 
 // function declarations
 
@@ -106,11 +103,11 @@ String outputState();
 String processor(const String &var);
 void checkFactoryReset();
 void HandleMQTTinfo();
-void checkCurrentSensor();
 void updateTime();
 void createSettingHTML();
 void handleLEDBreath();
 void handleUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final);
+void notifyPartner(bool newLightState);
 
 // Start of setup function
 void setup()
@@ -118,7 +115,7 @@ void setup()
 
   // check to see if the version control flag is set in hardware
   pinMode(VersionControlFlag, INPUT);
-  delay(10); // I added this delay to make sure the input had settled before reading it status.
+  delay(10); // delay to make sure the input had settled before reading its status
   if (digitalRead(VersionControlFlag))
   {
     RelayPin = Version2; // if it is set then set the relay pin to version 2
@@ -136,11 +133,37 @@ void setup()
   pinMode(LightButton, INPUT_PULLUP);  // Setup the intput pin for the button that will trigger the relay
   pinMode(FactoryReset, INPUT_PULLUP); // setup the input pin for the button that will be used to reset the device to factory
   pinMode(RelayPin, OUTPUT);           // Setup the output pin for the relay
-                                       // pinMode(ACS_Pin, INPUT);             // Define the pin mode of the pin that reads the current sensor
 
 #ifdef debug
   Serial.begin(115200);
 #endif
+
+  // Boot-time factory reset.
+  // The normal factory-reset check lives in loop(), but a configured device that
+  // cannot reach WiFi reboots from inside getPrefs()->checkWIFI() before loop()
+  // ever runs. That makes the device impossible to reset by button once it is in
+  // a WiFi boot loop. So check the button here, before any WiFi logic can reboot.
+  // Hold the reset button at power-up for 3 seconds to wipe the config.
+  if (digitalRead(FactoryReset) == LOW)
+  {
+    unsigned long holdStart = millis();
+    while (digitalRead(FactoryReset) == LOW)
+    {
+      if (millis() - holdStart > 3000)
+      {
+        for (int i = 0; i < 10; i++) // light show so the user knows the reset took
+        {
+          setColor(255, 0, 0);
+          delay(150);
+          setColor(0, 0, 255);
+          delay(150);
+        }
+        nvs_flash_erase(); // wipe the NV ram (saved config)
+        nvs_flash_init();
+        ESP.restart(); // reboot into unconfigured AP mode
+      }
+    }
+  }
 
   getPrefs();
 
@@ -150,9 +173,6 @@ void setup()
   sntp_set_sync_interval(12 * 60 * 60 * 1000UL); // set the NTP server poll interval to every 12 hours
 
   LEDLastTime = millis();
-
-  myCSE7759.setRX(10);
-  myCSE7759.begin();
 
 } // end of setup function
 
@@ -169,8 +189,6 @@ void loop()
   checkFactoryReset();
 
   HandleMQTTinfo();
-
-  checkCurrentSensor();
 
   updateTime();
 
@@ -206,16 +224,48 @@ void handleSwitch()
 
 } // end of handleSwitch function
 
+// This function sends an HTTP GET request to the partner switch to update its lightState
+void notifyPartner(bool newLightState)
+{
+  if (!threeWayMode || partnerIP.length() == 0)
+    return;
+
+  HTTPClient http;
+  String url = "http://" + partnerIP + "/api/statechange?state=" + String(newLightState ? 1 : 0);
+  http.begin(url);
+  http.setTimeout(2000);
+  http.GET();
+  http.end();
+} // end of notifyPartner function
+
 // This function changes the relay output pin to the new state, publishes the new state
 // to the MQTT server and stores the current state in NVram
 void doSwitch(int status)
 {
-  digitalWrite(RelayPin, status);                 // set the relay to the sent status value
-  client.publish(valuesArray[6], String(status)); // send the new switch state to the MQTT server in the Publish topic in the settings
-  valuesArray[8] = status;                        // set the current relay state in the values array variable
+  digitalWrite(RelayPin, status);
+  valuesArray[8] = String(status);
   preferences.begin("configuration", false);
-  preferences.putString(variablesArray[8].c_str(), valuesArray[8]); // store the relay state into NV ram
+  preferences.putString(variablesArray[8].c_str(), valuesArray[8]);
   preferences.end();
+
+  if (threeWayMode)
+  {
+    lightState = !lightState;
+
+    if (threeWayRole == "primary")
+    {
+      client.publish(valuesArray[6], String(lightState ? 1 : 0));
+      notifyPartner(lightState);
+    }
+    else if (threeWayRole == "secondary")
+    {
+      notifyPartner(lightState);
+    }
+  }
+  else
+  {
+    client.publish(valuesArray[6], String(status));
+  }
 
 } // end of doSwitch function
 
@@ -310,6 +360,15 @@ void checkWIFI()
 // This function starts the MQTT connection and if it is already connected it will maintain the connection
 void maintainMQTT()
 {
+  // Secondary switches in three-way mode do not use MQTT
+  if (threeWayMode && threeWayRole == "secondary")
+  {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      setColor(0, 255, 255); // Cyan for secondary mode
+    }
+    return;
+  }
 
   if (WifiAPStatus == 0)
   {
@@ -386,9 +445,23 @@ void getPrefs()
     valuesArray[8].toCharArray(temp2, temp);
     relayStatus = atoi(temp2);
     doSwitch(relayStatus);
+    // LEDBrightness is no longer set on the AP setup page, so a freshly
+    // configured device can have an empty/zero value here. Default it to a
+    // sane brightness to avoid a divide-by-zero in handleLEDBreath().
+    if (valuesArray[9] == "" || valuesArray[9].toInt() < 1)
+    {
+      valuesArray[9] = "100";
+      preferences.putString(variablesArray[9].c_str(), valuesArray[9]);
+    }
     temp = valuesArray[9].length() + 1;
     valuesArray[9].toCharArray(temp2, temp);
     pixels.setBrightness(atoi(temp2));
+
+    // Parse three-way mode settings
+    threeWayMode = (valuesArray[10] == "1");
+    threeWayRole = valuesArray[11];
+    partnerIP = valuesArray[12];
+    lightState = relayStatus; // Initialize lightState to match relay at boot
 
     checkWIFI();
 
@@ -405,6 +478,12 @@ void getPrefs()
                  {
       bool processedInput = false;
       preferences.begin("configuration", false);
+      // Handle checkbox: if ThreeWayMode not present in request, set to "0"
+      if (!request->hasParam(variablesArray[10]))
+      {
+        valuesArray[10] = "0";
+        preferences.putString(variablesArray[10].c_str(), valuesArray[10]);
+      }
       for (int i = 0; i < totalVariables; i++)
           {
             if (request->hasParam(variablesArray[i]))
@@ -443,37 +522,44 @@ void getPrefs()
       request->send(200, "text/plain", "OK"); });
 
     server_AP.on("/state", HTTP_GET, [](AsyncWebServerRequest *request)
-                 { request->send(200, "text/plain", String(relayStatus).c_str()); });
+                 {
+      if (threeWayMode)
+      {
+        request->send(200, "text/plain", String(lightState ? 1 : 0).c_str());
+      }
+      else
+      {
+        request->send(200, "text/plain", String(relayStatus).c_str());
+      } });
 
     // Send a GET request to <ESP_IP>/info
     // used to get the status of the switch state via HTTP
     // it will generate a JSON page with the current status
     server_AP.on("/info", HTTP_GET, [](AsyncWebServerRequest *request)
-                 { 
-                    
-                    
+                 {
                     String CurrentTime = convert2String(tm.tm_hour) + ":" + convert2String(tm.tm_min)  + ":" + convert2String(tm.tm_sec);
                     String CurrentDate = String(tm.tm_mon +1) + "/" + String(tm.tm_mday) + "/" + String(tm.tm_year +1900);
-                    StaticJsonDocument<200> doc;
+                    StaticJsonDocument<400> doc;
                     doc["Host Name"] = valuesArray[2];
                     doc["relayState"] = relayStatus;
                     doc["WiFiStrength"] = WiFi.RSSI();
                     doc["Date"] = CurrentDate;
                     doc["Time"] = CurrentTime;
-                    if (digitalRead(VersionControlFlag)) // if it hardware version 2 or higher then display current
+                    doc["ThreeWayMode"] = threeWayMode;
+                    if (threeWayMode)
                     {
-                      doc["Current"] = Amps_TRMS; // include how much current is currently flowing through the switch
-                      doc["Watts"] = Watts;       // include how much current is currently flowing through the switch
-                      doc["Voltage"] = myCSE7759.getVoltage();
+                      doc["ThreeWayRole"] = threeWayRole;
+                      doc["PartnerIP"] = partnerIP;
+                      doc["LightState"] = lightState;
                     }
-                      char buffer[256];
+                      char buffer[400];
                       serializeJson(doc, buffer);
-                      request->send(200, "text/plain", buffer); });
+                      request->send(200, "application/json", buffer); });
 
     // generate the configuration file and send it for download
     server_AP.on("/export", HTTP_GET, [](AsyncWebServerRequest *request)
                  {
-      StaticJsonDocument<300> doc;
+      StaticJsonDocument<400> doc;
       doc["SSID"] = valuesArray[0];
       doc["network Password"] = valuesArray[1];
       doc["Host Name"] = valuesArray[2];
@@ -484,7 +570,10 @@ void getPrefs()
       doc["Sub Topic"] = valuesArray[7];
       doc["Relay State"] = valuesArray[8];
       doc["LED Brightness"] = valuesArray[9];
-      char buffer[300];
+      doc["ThreeWayMode"] = valuesArray[10];
+      doc["ThreeWayRole"] = valuesArray[11];
+      doc["PartnerIP"] = valuesArray[12];
+      char buffer[400];
       serializeJson(doc, buffer);
       request->send(200, "text/plain", buffer); });
 
@@ -519,6 +608,53 @@ void getPrefs()
       }
       request->send(200, "text/plain", "OK"); });
 
+    // Three-way sync API: partner calls this to update lightState without toggling local relay
+    server_AP.on("/api/statechange", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      if (request->hasParam("state"))
+      {
+        String stateStr = request->getParam("state")->value();
+        lightState = (stateStr == "1");
+        if (threeWayMode && threeWayRole == "primary")
+        {
+          client.publish(valuesArray[6], stateStr);
+        }
+        request->send(200, "text/plain", "OK");
+      }
+      else
+      {
+        request->send(400, "text/plain", "Missing state parameter");
+      } });
+
+    // Three-way sync API: returns current lightState and relayStatus as JSON
+    server_AP.on("/api/state", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      StaticJsonDocument<64> doc;
+      doc["lightState"] = lightState;
+      doc["relayStatus"] = relayStatus;
+      char buffer[64];
+      serializeJson(doc, buffer);
+      request->send(200, "application/json", buffer); });
+
+    // Three-way sync API: manually set lightState for sync correction (does NOT toggle relay)
+    server_AP.on("/api/setlight", HTTP_GET, [](AsyncWebServerRequest *request)
+                 {
+      if (request->hasParam("state"))
+      {
+        String stateStr = request->getParam("state")->value();
+        lightState = (stateStr == "1");
+        notifyPartner(lightState);
+        if (threeWayMode && threeWayRole == "primary")
+        {
+          client.publish(valuesArray[6], stateStr);
+        }
+        request->send(200, "text/plain", "OK");
+      }
+      else
+      {
+        request->send(400, "text/plain", "Missing state parameter");
+      } });
+
     // Start server
     server_AP.onNotFound(handle_NotFound);
     server_AP.begin();
@@ -526,8 +662,9 @@ void getPrefs()
   else                   // if the board is not configured then do the following
   {                      // start the WIFI in AP mode and turn on the web server and display the config page
     setColor(0, 0, 255); // set the LED to blue to indicate the AP is active
-    WiFi.softAP(ssidAP, passwordAP);
-    WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);
+    WiFi.mode(WIFI_AP);                                  // make sure we are in AP-only mode
+    WiFi.softAPConfig(local_ipAP, gatewayAP, subnetAP);  // configure the IP/gateway/subnet BEFORE starting the AP
+    WiFi.softAP(ssidAP, passwordAP);                     // now start the access point and its DHCP server
     WifiAPStatus = true;
     delay(100);
 
@@ -539,6 +676,12 @@ void getPrefs()
     server_AP.on("/get", HTTP_GET, [](AsyncWebServerRequest *request)
                  {
     bool processedInput = false;
+    // Handle checkbox: if ThreeWayMode not present in request, set to "0"
+    if (!request->hasParam(variablesArray[10]))
+    {
+      valuesArray[10] = "0";
+      preferences.putString(variablesArray[10].c_str(), valuesArray[10]);
+    }
     for (int i = 0; i < totalVariables; i++)
     {
       if (request->hasParam(variablesArray[i]))
@@ -561,6 +704,21 @@ void getPrefs()
         {
           valuesArray[i] = "0";
           preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
+        }
+        else if (i == 12) // PartnerIP needs IP validation
+        {
+          String ipVal = request->getParam(variablesArray[i])->value();
+          if (ipVal.length() == 0 || ValidateIP(ipVal))
+          {
+            valuesArray[i] = ipVal;
+            preferences.putString(variablesArray[i].c_str(), valuesArray[i]);
+            processedInput = true;
+          }
+          else
+          {
+            inputError = i;
+            processedInput = true;
+          }
         }
         else
         {
@@ -621,6 +779,53 @@ void createAP_IndexHtml()
   index_html_AP.concat("<form action=\"/get\">");
   for (int i = 0; i < totalVariables; i++)
   {
+    // Skip RelayState and LEDBrightness in AP config - not user-configurable at setup
+    if (i == 8 || i == 9)
+    {
+      continue;
+    }
+
+    // Handle three-way mode fields specially
+    if (i == 10) // ThreeWayMode checkbox
+    {
+      index_html_AP.concat("<table><tr height='15px'>");
+      index_html_AP.concat("<hr><h3>Three-Way Switch Mode (Optional)</h3>");
+      String checked = (valuesArray[10] == "1") ? "checked" : "";
+      index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">Three-Way Mode: </label>");
+      index_html_AP.concat("<input type=\"checkbox\" name=\"" + variablesArray[10] + "\" value=\"1\" " + checked + ">");
+      index_html_AP.concat("<br></tr></table>");
+      continue;
+    }
+    if (i == 11) // ThreeWayRole dropdown
+    {
+      index_html_AP.concat("<table><tr height='15px'>");
+      index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">Three-Way Role: </label>");
+      index_html_AP.concat("<select name=\"" + variablesArray[11] + "\">");
+      String selPrimary = (valuesArray[11] == "primary") ? "selected" : "";
+      String selSecondary = (valuesArray[11] == "secondary") ? "selected" : "";
+      index_html_AP.concat("<option value=\"\">-- Select --</option>");
+      index_html_AP.concat("<option value=\"primary\" " + selPrimary + ">Primary</option>");
+      index_html_AP.concat("<option value=\"secondary\" " + selSecondary + ">Secondary</option>");
+      index_html_AP.concat("</select>");
+      index_html_AP.concat("<br></tr></table>");
+      continue;
+    }
+    if (i == 12) // PartnerIP
+    {
+      index_html_AP.concat("<table><tr height='15px'>");
+      index_html_AP.concat("<label style=\"display: inline-block; width: 141px;\">Partner IP: </label>");
+      if (inputError == i)
+      {
+        index_html_AP.concat("<input style=\"background-color : red;\" type=\"text\" name=\"" + variablesArray[12] + "\" value=\"" + valuesArray[12] + "\">");
+        inputError = -1;
+      }
+      else
+      {
+        index_html_AP.concat("<input type=\"text\" name=\"" + variablesArray[12] + "\" value=\"" + valuesArray[12] + "\">");
+      }
+      index_html_AP.concat("<br></tr></table>");
+      continue;
+    }
 
     index_html_AP.concat("<table>");
     index_html_AP.concat("<tr height='15px'>");
@@ -642,9 +847,9 @@ void createAP_IndexHtml()
     {
       index_html_AP.concat("<input type=\"" + _type + "\" name=\"" + variablesArray[i] + "\" value=\"" + valuesArray[i] + "\">");
     }
-    // index_html.concat("<input type=\"submit\" value=\"Submit\">");
     index_html_AP.concat("<br>");
-    if (valuesArray[i] == "")
+    // Only require original fields (0-7) to be filled for allEntered
+    if (valuesArray[i] == "" && i < 8)
     {
       allEntered = false;
     }
@@ -727,6 +932,18 @@ String processor(const String &var)
     WIFI.concat("<div class = 'wv1 wave'>");
     WIFI.concat("</div></div></div></div></div> ");
     return WIFI;
+  }
+  if (var == "THREEWAYPLACEHOLDER")
+  {
+    if (threeWayMode)
+    {
+      String html = "<br><hr><h4>Three-Way Sync (" + threeWayRole + ")</h4>";
+      html += "<p style='font-size:1rem;'>Light State Override:</p>";
+      html += "<button onclick='setLightState(1)' style='padding:8px 16px; margin:4px;'>Set Light ON</button>";
+      html += "<button onclick='setLightState(0)' style='padding:8px 16px; margin:4px;'>Set Light OFF</button>";
+      return html;
+    }
+    return String();
   }
   return String();
 } // end of processor function
@@ -818,40 +1035,13 @@ void HandleMQTTinfo()
 
 } // end of HandleMQTTinfo function
 
-// The function reads the current sensor and reports the data over time
-void checkCurrentSensor()
-{
-
-  if ((millis() - previousMillisSensor) > currentReadInterval) // check to see if enough time has passed before checking the Current sensor
-  {
-    previousMillisSensor = millis(); // update time
-    myCSE7759.handle();
-    // ACS_Value = myCSE7759.getCurrent(); // ACS_Value currently not used
-    Amps_TRMS = myCSE7759.getCurrent();   // Check the CSE7759 and get its current
-    Watts = myCSE7759.getApparentPower(); // get watts
-  }
-
-  // ******************************************************
-  // the following is only going to work on Gen 3 boards
-  // uncomment this for newer boards and adjust the reporting in the other functions
-  // to use this data to determine if the switch is on or off
-
-  // if (Amps_TRMS > .02) { // if the current is above a basic value then assume the switch is on
-  //   OnState = true;
-  // } else {  // if not then assume the switch is off
-  //   OnState = false;
-  //  }
-  //  ****************************************************
-
-} // end of checkCurrenSensor function
-
 // This function makes sure the device always knows the current time
 // and keeps that time in the TM struct
 // ***This will be used later to track power use over time***
 void updateTime()
 {
-
-  if ((millis() - lastTimeCheck) > currentReadInterval)
+  const unsigned long timeUpdateInterval = 1000;
+  if ((millis() - lastTimeCheck) > timeUpdateInterval)
   {
     lastTimeCheck = millis();
     time(&now);             // read the current time
@@ -915,6 +1105,19 @@ void createSettingHTML()
   settingsHTML.concat("<br>");
   settingsHTML.concat("LED Brightness <input type='range' onchange = 'updateSliderPWM(this)' id='brightnessSlider' min='10' max='255' value=" + valuesArray[9] + " step = '1' class='slider' id='myRange'>");
   settingsHTML.concat("<br>");
+  settingsHTML.concat("<hr><h3>Three-Way Switch Mode</h3>");
+  String twChecked = (valuesArray[10] == "1") ? "checked" : "";
+  settingsHTML.concat("Enable Three-Way Mode <input type='checkbox' name=\"" + variablesArray[10] + "\" value='1' " + twChecked + ">");
+  settingsHTML.concat("<br>");
+  settingsHTML.concat("Role <select name=\"" + variablesArray[11] + "\">");
+  String selP = (valuesArray[11] == "primary") ? "selected" : "";
+  String selS = (valuesArray[11] == "secondary") ? "selected" : "";
+  settingsHTML.concat("<option value='primary' " + selP + ">Primary</option>");
+  settingsHTML.concat("<option value='secondary' " + selS + ">Secondary</option>");
+  settingsHTML.concat("</select>");
+  settingsHTML.concat("<br>");
+  settingsHTML.concat("Partner IP <input type='text' name=\"" + variablesArray[12] + "\" value=\"" + valuesArray[12] + "\">");
+  settingsHTML.concat("<br><hr>");
   settingsHTML.concat("<input type='submit' value='Submit'> <input type='button' value='Cancel' onclick='location.href=\"http:\/\/" + IP + "\"'/>");
   settingsHTML.concat("</form>");
   settingsHTML.concat("<br>Once the form is submitted the page will reload after 7 seconds");
@@ -935,15 +1138,20 @@ void handleLEDBreath()
   // configured due to the accessing the valuesArray[9] while the switch is not configured
   if (configured)
   {
-    if ((millis() - LEDLastTime) > (BreathDelay + (255 / valuesArray[9].toInt() * 4))) // only adjust the display intensity if the correct amount of time has elapsed
+    int maxBrightness = valuesArray[9].toInt();
+    if (maxBrightness < 1) // guard against a divide-by-zero (empty/zero brightness) that would crash and reboot the ESP32
+    {
+      maxBrightness = 100;
+    }
+    if ((millis() - LEDLastTime) > (BreathDelay + (255 / maxBrightness * 4))) // only adjust the display intensity if the correct amount of time has elapsed
     {
 
         if (relayStatus == false) // if the relay is off then breath the LED
         {
           if (LEDBreathDirection == true) // check to see whether or not to count up or down
           {
-          LEDBrightness++;                            // count up
-          if (LEDBrightness > valuesArray[9].toInt()) // if at the top of the scale
+          LEDBrightness++;                  // count up
+          if (LEDBrightness > maxBrightness) // if at the top of the scale
           {
             LEDBreathDirection = false; // change directions
           }
@@ -961,7 +1169,7 @@ void handleLEDBreath()
         }
         else // if the Relay is on
         {
-          pixels.setBrightness(valuesArray[9].toInt()); // set the LED to the maximum set point
+          pixels.setBrightness(maxBrightness); // set the LED to the maximum set point
         }
         LEDLastTime = millis(); // keep track of the time for the next cycle
     }
@@ -982,7 +1190,7 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
     temp += data[i];
   }
 
-  StaticJsonDocument<300> doc;
+  StaticJsonDocument<400> doc;
   DeserializationError error = deserializeJson(doc, temp);
 
   valuesArray[0] = doc["SSID"].as<String>();
@@ -995,4 +1203,9 @@ void handleUpload(AsyncWebServerRequest *request, String filename, size_t index,
   valuesArray[7] = doc["Sub Topic"].as<String>();
   valuesArray[8] = doc["Relay State"].as<String>();
   valuesArray[9] = doc["LED Brightness"].as<String>();
-}
+  valuesArray[10] = doc["ThreeWayMode"].as<String>();
+  valuesArray[11] = doc["ThreeWayRole"].as<String>();
+  valuesArray[12] = doc["PartnerIP"].as<String>();
+
+  request->redirect("/settings");
+} // end of handleUpload
